@@ -1,0 +1,15 @@
+[Unit]
+Description=Halo Mesh Controller
+After=network.target hostapd.service
+Wants=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /home/pi/start_mesh.sh
+RemainAfterExit=yes
+ExecStartPost=/usr/bin/python3 /home/pi/web_admin.py &
+ExecStartPost=/bin/sleep 5
+ExecStartPost=/bin/systemctl restart hostapd
+
+[Install]
+WantedBy=multi-user.target

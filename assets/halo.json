@@ -1,0 +1,8 @@
+{
+    "mesh_id": "HaloNet",
+    "freq": "915",
+    "country": "US",
+    "ip_mode": "smart",
+    "static_ip": "192.168.10.1",
+    "gateway": "auto"
+}

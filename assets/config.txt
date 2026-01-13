@@ -1,0 +1,12 @@
+# --- Halo Hardware Config ---
+# Enable SPI for Alfa HaLow HAT
+dtparam=spi=on
+
+# Enable UART (Console) for debugging
+enable_uart=1
+
+# Enable USB Ethernet Gadget (Laptop Connectivity)
+dtoverlay=dwc2
+
+# Optional: Disable Bluetooth to save power/interference
+dtoverlay=disable-bt
