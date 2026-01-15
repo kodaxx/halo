@@ -111,6 +111,12 @@ sed -i '/stopDHCPCD()/s/^/#/' "$START_PY"
 # Disable stopping NAT
 sed -i '/stopNAT()/s/^/#/' "$START_PY"
 
+# NUCLEAR OPTION: Disable STARTING DHCPCD, NAT, and DNSMASQ
+# These functions modify system networking and kill ssh. We will handle IP manually.
+sed -i 's/startDHCPCD()/#startDHCPCD()/g' "$START_PY"
+sed -i 's/startDNSMASQ()/#startDNSMASQ()/g' "$START_PY"
+sed -i 's/startNAT()/#startNAT()/g' "$START_PY"
+
 # Switch to wlan1
 sed -i "s/run_ap('wlan0')/run_ap('wlan1')/g" "$START_PY"
 sed -i "s/run_sta('wlan0')/run_sta('wlan1')/g" "$START_PY"
