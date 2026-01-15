@@ -57,10 +57,22 @@ fi
 
 # 5. Install
 echo "Installing driver..."
-sudo cp nrc.ko /lib/modules/$(uname -r)/extra/nrc.ko
+TARGET_MOD_DIR="/lib/modules/$(uname -r)/extra"
+sudo mkdir -p "$TARGET_MOD_DIR"
+sudo cp nrc.ko "$TARGET_MOD_DIR/nrc.ko"
 sudo depmod -a
-sudo rmmod nrc
-sudo modprobe nrc
+
+echo "Unloading old driver..."
+sudo rmmod nrc 2>/dev/null
+
+echo "Loading new driver..."
+# Prefer insmod to be absolutely sure we load the file we just built
+if sudo insmod nrc.ko; then
+    echo "Driver loaded successfully via insmod."
+else
+    echo "insmod failed, trying modprobe..."
+    sudo modprobe nrc || exit 1
+fi
 
 echo "Checking dmesg..."
 dmesg | grep -i nrc | tail -n 20
