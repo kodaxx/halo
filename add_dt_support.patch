@@ -1,13 +1,13 @@
 --- a/package/src/nrc/nrc-hif-cspi.c
 +++ b/package/src/nrc/nrc-hif-cspi.c
-@@ -37,6 +37,7 @@
- /* include/linux/spi/spi.h */
+@@ -19,6 +19,7 @@
+ #include <linux/wait.h>
  #include <linux/spi/spi.h>
  #include <linux/gpio.h>
 +#include <linux/of.h>
- #include "nrc-hif.h"
- #include "nrc-debug.h"
- 
+ #include <linux/irqreturn.h>
+ #include <linux/interrupt.h>
+ #include <net/mac80211.h>
 @@ -2575,8 +2576,15 @@
  
  MODULE_DEVICE_TABLE(spi, nrc_spi_id);
