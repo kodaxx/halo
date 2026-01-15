@@ -1,15 +1,16 @@
 [Unit]
 Description=Halo Mesh Controller
+Documentation=file:///home/pi/README.md
 After=network.target hostapd.service
-Wants=network.target
+Wants=network.target web_admin.service
 
 [Service]
 Type=oneshot
 ExecStart=/bin/bash /home/pi/start_mesh.sh
 RemainAfterExit=yes
-ExecStartPost=/usr/bin/python3 /home/pi/web_admin.py &
-ExecStartPost=/bin/sleep 5
-ExecStartPost=/bin/systemctl restart hostapd
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=halo-mesh
 
 [Install]
 WantedBy=multi-user.target

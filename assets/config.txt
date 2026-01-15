@@ -2,6 +2,9 @@
 # Enable SPI for Alfa HaLow HAT
 dtparam=spi=on
 
+# Load NRC7292 device tree overlay (compiled during driver setup)
+dtoverlay=nrc-rpi
+
 # Enable UART (Console) for debugging
 enable_uart=1
 

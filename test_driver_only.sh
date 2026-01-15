@@ -3,9 +3,9 @@
 # Focus: Get the NRC7292 driver compiled and working
 # Does NOT install config files, scripts, or services yet
 
-REPO_URL="https://github.com/kodaxx/Halo.git"
+REPO_URL="https://github.com/kodaxx/halo.git"
 INSTALL_DIR="/tmp/halo_install"
-DRIVER_DIR="/home/pi/nrc7292_sw_pkg"
+DRIVER_DIR="/home/halo/nrc7292_sw_pkg"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
@@ -149,7 +149,9 @@ fi
 
 log "Driver compiled successfully: $(pwd)/nrc.ko"
 
-# 8. Load the driver
+# 8. Load the driverlog "Loading kernel dependencies..."
+sudo modprobe cfg80211 || log "WARNING: cfg80211 already loaded or unavailable"
+sudo modprobe mac80211 || log "WARNING: mac80211 already loaded or unavailable"
 log "Loading nrc.ko module..."
 sudo insmod nrc.ko || error_exit "Failed to insert nrc.ko module"
 
@@ -179,10 +181,18 @@ fi
 log ""
 log "=== Driver Setup Complete ==="
 log ""
-log "Next steps:"
-log "  1. Review driver output: dmesg | tail -20"
-log "  2. Check wireless devices: ip link show"
-log "  3. If not loaded on reboot, add 'insmod $DRIVER_DIR/package/src/nrc/nrc.ko' to startup"
-log "  4. To unload driver: sudo rmmod nrc"
-log "  5. For full installation, run: bash install.sh"
+log "IMPORTANT: You need to REBOOT for the changes to take full effect!"
+log ""
+log "What was done:"
+log "  ✓ Firmware installed to /lib/firmware/uni.bin"
+log "  ✓ Device tree overlay compiled and installed to /boot/overlays/nrc-rpi.dtbo"
+log "  ✓ Device tree overlay added to config.txt (dtoverlay=nrc-rpi)"
+log "  ✓ Driver compiled and loaded (nrc.ko)"
+log ""
+log "What still needs to happen:"
+log "  1. REBOOT the device for device tree overlay to load"
+log "  2. After reboot, driver may auto-load if it's in /etc/modules"
+log "  3. For full installation, run: bash install.sh"
+log ""
+log "To reboot now: sudo reboot"
 log ""
