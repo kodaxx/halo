@@ -28,6 +28,24 @@ else
     log "   Check: dtc -I fs /sys/firmware/devicetree/base -O dts | grep nrc"
 fi
 
+# Check firmware file
+log "Checking firmware files..."
+if [ -f "/lib/firmware/uni.bin" ]; then
+    FW_SIZE=$(stat -f%z "/lib/firmware/uni.bin" 2>/dev/null || stat -c%s "/lib/firmware/uni.bin" 2>/dev/null || echo "unknown")
+    log "✓ Firmware file found: /lib/firmware/uni.bin (size: $FW_SIZE bytes)"
+else
+    log "⚠ Firmware file NOT found at /lib/firmware/uni.bin"
+    log "   Driver may fail to probe without firmware!"
+fi
+
+# Check device tree overlay file
+log "Checking device tree overlay file..."
+if [ -f "/boot/overlays/nrc-rpi.dtbo" ]; then
+    log "✓ Device tree overlay file found: /boot/overlays/nrc-rpi.dtbo"
+else
+    log "⚠ Device tree overlay file NOT found at /boot/overlays/nrc-rpi.dtbo"
+fi
+
 # 2. Check if driver file exists
 if [ ! -f "$DRIVER_KO" ]; then
     error_exit "Driver file not found at $DRIVER_KO"
@@ -122,11 +140,20 @@ fi
 log ""
 log "Detailed device tree check..."
 if command -v dtc &>/dev/null; then
-    log "Full device tree dump (filtered):"
-    dtc -I fs /sys/firmware/devicetree/base -O dts 2>/dev/null | grep -A 5 -B 5 "nrc\|spi0\|cspi" | head -50 || log "Could not dump device tree"
+    log "Looking for nrc device node in device tree..."
+    NRC_NODE=$(dtc -I fs /sys/firmware/devicetree/base -O dts 2>/dev/null | grep -A 10 "nrc-cspi\|nrc@")
+    if [ -n "$NRC_NODE" ]; then
+        log "✓ Found NRC device node:"
+        echo "$NRC_NODE" | head -15
+    else
+        log "⚠ NRC device node NOT found in device tree"
+        log "   The overlay may not have created the device node properly"
+        log ""
+        log "SPI0 node info:"
+        dtc -I fs /sys/firmware/devicetree/base -O dts 2>/dev/null | grep -A 15 "spi@7e204000" | head -20
+    fi
 else
     log "Device tree compiler (dtc) not available"
-    log "To check: cat /proc/device-tree/base/spi@7e204000/"
 fi
 
 # 10. Check module parameters (if available)
