@@ -77,6 +77,9 @@ sed -i 's/os.system("sudo killall wpa_supplicant")/#os.system("sudo killall wpa_
 
 # 5. Patch files recursively
 echo "Patching all scripts for user path..."
+# Ensure scripts are executable
+find "$LOCAL_PKG_DIR" -type f \( -name "*.py" -o -name "*.sh" \) -exec chmod +x {} \;
+
 # Replace /home/pi path in all .py, .sh, and .conf files
 find "$LOCAL_PKG_DIR" -type f \( -name "*.py" -o -name "*.sh" -o -name "*.conf" \) -print0 | xargs -0 sed -i "s|/home/pi/|$HOME/|g"
 
