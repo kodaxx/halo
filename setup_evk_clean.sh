@@ -6,8 +6,16 @@
 REPO_ROOT=$(pwd)
 # Robust root detection
 if [ ! -d "$REPO_ROOT/nrc7292_sw_pkg" ]; then
-    echo "Error: Run from halo repo root."
-    exit 1
+    echo "Repo contents not found. Cloning kodaxx/halo..."
+    git clone https://github.com/kodaxx/halo.git temp_repo
+    if [ -d "temp_repo/nrc7292_sw_pkg" ]; then
+        # Move the inner package to current dir to match expected structure or use it from there
+        # To avoid confusion, let's just use the cloned repo as root
+        REPO_ROOT="$(pwd)/temp_repo"
+    else
+        echo "Error: Failed to clone repository."
+        exit 1
+    fi
 fi
 
 SRC_EVK="$REPO_ROOT/nrc7292_sw_pkg/package/evk/sw_pkg/nrc_pkg"

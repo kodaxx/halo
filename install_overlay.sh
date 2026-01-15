@@ -8,8 +8,15 @@ DTBO_NAME="nrc-rpi" # Standard name used in config.txt often
 TARGET_DTBO="/boot/overlays/$DTBO_NAME.dtbo"
 
 if [ ! -f "$DTS_FILE" ]; then
-    echo "Error: DTS file not found at $DTS_FILE"
-    exit 1
+    echo "DTS file not found locally. Downloading from GitHub..."
+    DTS_URL="https://raw.githubusercontent.com/kodaxx/halo/main/nrc7292_sw_pkg/dts/newracom_for_5.16_or_later.dts"
+    curl -sL "$DTS_URL" -o "newracom_for_5.16_or_later.dts"
+    DTS_FILE="newracom_for_5.16_or_later.dts"
+    
+    if [ ! -f "$DTS_FILE" ]; then
+        echo "Error: Failed to download DTS file."
+        exit 1
+    fi
 fi
 
 echo "Compiling Device Tree Overlay..."
