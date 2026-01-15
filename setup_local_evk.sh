@@ -12,11 +12,30 @@ echo "Setting up Local EVK Environment..."
 echo "Repo Root: $REPO_ROOT"
 echo "Target Dir: $LOCAL_PKG_DIR"
 
-# 2. Check for Compiled Driver
+# 2. Compilation (Auto-detect if needed)
+echo "Checking for compiled driver..."
 if [ ! -f "$COMPILED_DRIVER" ]; then
-    echo "Error: Compiled driver nrc.ko not found at $COMPILED_DRIVER"
-    echo "Please run ./apply_fix_v3.sh first to compile the driver."
-    exit 1
+    echo "Driver not found. Attempting to compile..."
+    SRC_DIR="$REPO_ROOT/nrc7292_sw_pkg/package/src/nrc"
+    
+    if [ -d "$SRC_DIR" ]; then
+        cd "$SRC_DIR" || exit 1
+        echo "Compiling in $SRC_DIR..."
+        make clean
+        if make; then
+            echo "Compilation successful!"
+        else
+            echo "Error: Compilation failed."
+            echo "Ensure you are on Raspberry Pi OS Legacy (Bullseye) and have kernel headers installed."
+            exit 1
+        fi
+        cd "$REPO_ROOT" || exit 1
+    else
+        echo "Error: Source directory not found at $SRC_DIR"
+        exit 1
+    fi
+else
+    echo "Found existing compiled driver."
 fi
 
 # 3. Create Local Workspace
