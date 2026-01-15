@@ -31,9 +31,14 @@ CURRENT_USER=$(whoami)
 
 echo "===  Setting up Clean EVK Environment in $LOCAL_PKG_DIR for user $CURRENT_USER ==="
 
-# Install Kernel Headers (Required for compilation)
-echo "Installing Kernel Headers..."
-sudo apt-get install -y raspberrypi-kernel-headers build-essential
+# Install Kernel Headers (Required for compilation) and hostapd
+echo "Installing Kernel Headers and Hostapd..."
+sudo apt-get install -y raspberrypi-kernel-headers build-essential hostapd
+
+# Unmask hostapd (it is often masked by default on RPi)
+sudo systemctl unmask hostapd
+sudo systemctl disable hostapd # We run it manually via script
+
 
 # 1. Copy Generic EVK Package
 if [ -d "$LOCAL_PKG_DIR" ]; then
@@ -120,8 +125,11 @@ sed -i '/def /! s/startNAT()/#startNAT()/g' "$START_PY"
 # Switch to wlan1
 sed -i "s/run_ap('wlan0')/run_ap('wlan1')/g" "$START_PY"
 sed -i "s/run_sta('wlan0')/run_sta('wlan1')/g" "$START_PY"
-sed -i 's/subprocess.call(\["sudo", "ifconfig", "wlan0", "up"\])/subprocess.call(["sudo", "ifconfig", "wlan1", "up"])/g' "$START_PY"
+# Update: Manually set IP for wlan1 since we disabled dhcpcd service restart
+sed -i 's/subprocess.call(\["sudo", "ifconfig", "wlan0", "up"\])/subprocess.call(["sudo", "ifconfig", "wlan1", "192.168.200.1", "up"])/g' "$START_PY"
+
 # Fix hostapd configuration files
+
 find "$LOCAL_PKG_DIR/script/conf" -name "*.conf" -print0 | xargs -0 sed -i "s/interface=wlan0/interface=wlan1/g"
 
 # CRITICAL: Patch ip_config.sh to prevent it from hijacking wlan0
