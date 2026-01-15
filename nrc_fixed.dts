@@ -1,0 +1,44 @@
+/*
+ * Device Tree overlay for Newracom (Fixed for Kernel 6.12 / Pi Zero W)
+ * Removed spidev@0 disable block which causes "Failed to apply overlay" 
+ * if the node is missing in base DT.
+ */
+/dts-v1/;
+/plugin/;
+/ {
+	compatible = "brcm,bcm2835", "brcm,bcm2708", "brcm,bcm2709", "brcm,bcm2711";
+
+	fragment@0 {
+		target = <&gpio>;
+		__overlay__ {
+			nrc_pins: nrc_pins {
+				brcm,pins = <5 7 8 9 10 11>;
+				brcm,function = <0 1 1 4 4 4>;
+				brcm,pull = <1 2 2 2 2 1>;
+			};
+		};
+	};
+
+    fragment@1 {
+        target = <&spi0>;
+        __overlay__ {
+            pinctrl-names="default";
+            pinctrl-0=<&nrc_pins>;
+            status = "okay";
+            #address-cells = <1>;
+            #size-cells = <0>;
+
+            nrc: nrc-cspi@0 {               
+                compatible ="newracom,nrc7292";
+                reg = <0>;                  
+                interrupt-parent = <&gpio>;
+                interrupts = <5 4>;             
+                spi-max-frequency = <20000000>;     
+            };
+        };
+    };
+
+    __overrides__ {
+        max_speed_hz = <&nrc>,"spi-max-frequency:0";
+    };
+};
