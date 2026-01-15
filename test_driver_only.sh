@@ -50,7 +50,7 @@ git clone $REPO_URL $INSTALL_DIR || error_exit "git clone failed"
 
 # 4. Setup nrc7292 driver
 log "Setting up NRC7292 HaLow driver..."
-cd /home/pi || error_exit "Failed to cd to /home/pi"
+cd /home/halo || error_exit "Failed to cd to /home/halo"
 
 if [ ! -d "nrc7292_sw_pkg" ]; then
     log "Copying nrc7292_sw_pkg from installation..."
