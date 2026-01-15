@@ -795,10 +795,10 @@ static int nrc_wim_event_handler(struct nrc *nw,
 		nrc_wim_handle_req_deauth(nw);
 		break;
 	case WIM_EVENT_CSA:
-		ieee80211_csa_finish(vif);
+		ieee80211_csa_finish(vif, 0);
 		break;
 	case WIM_EVENT_CH_SWITCH:
-		ieee80211_chswitch_done(vif, true);
+		ieee80211_chswitch_done(vif, true, 0);
 		break;
 	case WIM_EVENT_LBT_ENABLED:
 		nrc_dbg(NRC_DBG_HIF, "lbt enabled");
