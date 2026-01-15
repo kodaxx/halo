@@ -1,6 +1,9 @@
 #!/bin/bash
 # Compile and install fixed overlay
 
+echo "Downloading nrc_fixed.dts..."
+wget -q https://raw.githubusercontent.com/kodaxx/halo/main/nrc_fixed.dts -O nrc_fixed.dts || exit 1
+
 echo "Compiling nrc_fixed.dts..."
 dtc -@ -I dts -O dtb -o nrc-fixed.dtbo nrc_fixed.dts || exit 1
 
