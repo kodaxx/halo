@@ -3,7 +3,22 @@
 # Sets up the EVK software locally, patching it to run as current user and keep wlan0 alive.
 
 # 1. Define Paths
-REPO_ROOT=$(pwd)
+# Robustly find the repository root (directory containing nrc7292_sw_pkg)
+current_dir=$(pwd)
+REPO_ROOT="$current_dir"
+while [[ "$REPO_ROOT" != "/" && ! -d "$REPO_ROOT/nrc7292_sw_pkg" ]]; do
+    REPO_ROOT=$(dirname "$REPO_ROOT")
+done
+
+if [ ! -d "$REPO_ROOT/nrc7292_sw_pkg" ]; then
+    # Fallback: Check if we are inside the nrc7292_sw_pkg dir itself and maybe that IS the root context the user wants
+    # But for this specific script structure, we expect the halo repo structure.
+    # Let's try one more assumption: defaults to $HOME if not found, or error out.
+    echo "Error: Could not locate 'nrc7292_sw_pkg' directory in parent paths."
+    echo "Please run this script from within the 'halo' repository."
+    exit 1
+fi
+
 SRC_EVK="$REPO_ROOT/nrc7292_sw_pkg/package/evk/sw_pkg/nrc_pkg"
 COMPILED_DRIVER="$REPO_ROOT/nrc7292_sw_pkg/package/src/nrc/nrc.ko"
 LOCAL_PKG_DIR="$HOME/nrc_pkg"
