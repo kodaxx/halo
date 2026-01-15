@@ -22,12 +22,12 @@ Now with Universal Gateway support! Plug in a laptop (USB) or Starlink (Ethernet
 
 - You do not need to download a custom image. We use the standard Raspberry Pi OS.
 - Download and install the Raspberry Pi Imager.
-- Choose OS: Select Raspberry Pi OS Lite (64-bit).
+- Choose OS: Select Raspberry Pi OS Lite (Legacy, 32-bit).
 - Choose Storage: Select your SD card.
 - Hostname: Set to halo-setup.
 - Enable SSH: Select "Use password authentication".
 - Set Username/Password: e.g., halo / halo.
-- Configure Wireless LAN: Enter your HOME Wi-Fi credentials. This allows the Pi to connect to the internet on its first boot to download the Halo software.
+- Configure Wireless LAN: Enter your HOME Wi-Fi credentials. This allows the Pi to connect to the internet on its first boot to download the Halo software. *Note: this MUST be 2.4Ghz WiFi*
 - Click WRITE.
 
 ##### **Step 2: Connect via SSH**

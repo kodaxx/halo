@@ -1,10 +1,20 @@
 [Unit]
-Description=First Boot Driver Compilation
-After=network.target
+Description=Halo First-Boot Driver Compilation
+Documentation=file:///home/pi/README.md
+After=network-online.target
+Wants=network-online.target
+Before=halo.service
+ConditionPathExists=/home/pi/nrc7292_sw_pkg/package/src/nrc/Makefile
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c "cd /home/pi/nrc7292_sw_pkg && make && cp nrc.ko /lib/modules/$(uname -r)/kernel/drivers/net/wireless/ && depmod -a && systemctl disable halo-firstboot"
+User=root
+WorkingDirectory=/home/pi/nrc7292_sw_pkg/package/src/nrc
+ExecStart=/bin/bash -c 'make && sudo make install_module && depmod -a && systemctl disable halo-firstboot'
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=halo-firstboot
+RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
