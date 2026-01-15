@@ -5,12 +5,18 @@
 
 REPO_ROOT=$(pwd)
 # Robust root detection
-if [ ! -d "$REPO_ROOT/nrc7292_sw_pkg" ]; then
-    echo "Repo contents not found. Cloning kodaxx/halo..."
+# 1. Check if we are running from within the repo (standard behavior)
+if [ -d "nrc7292_sw_pkg" ]; then
+    REPO_ROOT=$(pwd)
+# 2. Check if the bootstrap script already cloned it to ~/halo
+elif [ -d "$HOME/halo/nrc7292_sw_pkg" ]; then
+    REPO_ROOT="$HOME/halo"
+    echo "Found existing repository at $REPO_ROOT"
+else
+    # 3. Fallback: Clone if necessary (rare if bootstrap was run)
+    echo "Repo not found locally. Cloning kodaxx/halo to temp_repo..."
     git clone https://github.com/kodaxx/halo.git temp_repo
     if [ -d "temp_repo/nrc7292_sw_pkg" ]; then
-        # Move the inner package to current dir to match expected structure or use it from there
-        # To avoid confusion, let's just use the cloned repo as root
         REPO_ROOT="$(pwd)/temp_repo"
     else
         echo "Error: Failed to clone repository."
