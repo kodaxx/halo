@@ -65,13 +65,18 @@ fi
 # 3. Install Firmware
 echo "Installing Firmware..."
 if [ -f "$BINARY_DIR/nrc7292_cspi.bin" ]; then
-    cp "$BINARY_DIR/nrc7292_cspi.bin" "$LOCAL_PKG_DIR/evk/firmware/uni_s1g.bin"
-    # Ensure sw/firmware/copy uses correct names/paths if needed, or just manual copy
+    # Ensure destination exists
+    mkdir -p "$LOCAL_PKG_DIR/sw/firmware"
+    
+    # Copy firmware and BD data to where 'copy' script expects them
     cp "$BINARY_DIR/nrc7292_cspi.bin" "$LOCAL_PKG_DIR/sw/firmware/nrc7292_cspi.bin"
-    cp "$BINARY_DIR/nrc7292_cspi.bin" "$LOCAL_PKG_DIR/sw/firmware/uni_s1g.bin" 
     cp "$BINARY_DIR/nrc7292_bd.dat" "$LOCAL_PKG_DIR/sw/firmware/nrc7292_bd.dat"
+    # Create the default link just in case
+    cp "$BINARY_DIR/nrc7292_cspi.bin" "$LOCAL_PKG_DIR/sw/firmware/uni_s1g.bin"
+    
+    echo "Firmware installed to $LOCAL_PKG_DIR/sw/firmware"
 else
-    echo "Error: Firmware not found!"
+    echo "Error: Firmware not found at $BINARY_DIR!"
     exit 1
 fi
 
