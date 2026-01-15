@@ -46,16 +46,10 @@ else
 fi
 
 # 4. Fix Helper: Replace incorrect IS_ERR checks with NULL checks
-# The driver incorrectly uses IS_ERR for kzalloc/nrc_nw_alloc returns which are NULL on failure
-if grep -q "IS_ERR(priv)" "$TARGET_FILE"; then
-    echo "Fixing IS_ERR(priv)..."
-    sed -i 's/if (IS_ERR(priv))/if (!priv)/' "$TARGET_FILE"
-fi
-
-if grep -q "IS_ERR(nw)" "$TARGET_FILE"; then
-    echo "Fixing IS_ERR(nw)..."
-    sed -i 's/if (IS_ERR(nw))/if (!nw)/' "$TARGET_FILE"
-fi
+# Function returns NULL on failure, but code checks IS_ERR. Fix it globally.
+sed -i 's/IS_ERR(priv)/!priv/g' "$TARGET_FILE"
+sed -i 's/IS_ERR(nw)/!nw/g' "$TARGET_FILE"
+sed -i 's/IS_ERR(hdev)/!hdev/g' "$TARGET_FILE"
 
 # 5. Recompile
 echo "Recompiling..."
