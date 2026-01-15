@@ -66,11 +66,19 @@ if lsmod | grep -q "^nrc "; then
 fi
 
 # 5. Load the driver
+log "Loading kernel dependencies (cfg80211, mac80211)..."
+sudo modprobe cfg80211 || log "WARNING: cfg80211 already loaded or unavailable"
+sudo modprobe mac80211 || log "WARNING: mac80211 already loaded or unavailable"
+
 log "Loading nrc.ko driver..."
+# Note: The overlay must be loaded for the driver to probe the device
+# The overlay creates the SPI device node that the driver needs
 sudo insmod "$DRIVER_KO" || error_exit "Failed to load driver"
 sleep 2
 
 log "✓ Driver loaded successfully"
+log "Waiting for driver to probe NRC7292 device (3 seconds)..."
+sleep 3
 
 # 6. Verify driver is loaded
 log "Verifying driver module..."
