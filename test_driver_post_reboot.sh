@@ -20,12 +20,12 @@ log ""
 
 # 1. Check if device tree overlay was loaded
 log "Checking device tree overlay..."
-if [ -f "/proc/device-tree/compatible" ]; then
-    if grep -q "nrc" /proc/device-tree/name 2>/dev/null || dmesg | grep -q "nrc-rpi"; then
-        log "✓ Device tree overlay appears to be loaded"
-    else
-        log "⚠ Device tree overlay may not be loaded (check dmesg)"
-    fi
+if dtc -I fs /sys/firmware/devicetree/base -O dts 2>/dev/null | grep -q "nrc"; then
+    log "✓ Device tree overlay (nrc-rpi) appears to be loaded in device tree"
+else
+    log "⚠ Device tree overlay NOT found in loaded device tree"
+    log "   This is the likely issue - overlay didn't load!"
+    log "   Check: dtc -I fs /sys/firmware/devicetree/base -O dts | grep nrc"
 fi
 
 # 2. Check if driver file exists
@@ -120,13 +120,13 @@ fi
 
 # Check device tree
 log ""
-log "Checking device tree for nrc overlay..."
-if [ -d "/sys/firmware/devicetree/base" ]; then
-    if grep -r "nrc" /sys/firmware/devicetree/base 2>/dev/null | head -3; then
-        log "✓ NRC found in device tree"
-    else
-        log "⚠ NRC not found in device tree (overlay may not have loaded)"
-    fi
+log "Detailed device tree check..."
+if command -v dtc &>/dev/null; then
+    log "Full device tree dump (filtered):"
+    dtc -I fs /sys/firmware/devicetree/base -O dts 2>/dev/null | grep -A 5 -B 5 "nrc\|spi0\|cspi" | head -50 || log "Could not dump device tree"
+else
+    log "Device tree compiler (dtc) not available"
+    log "To check: cat /proc/device-tree/base/spi@7e204000/"
 fi
 
 # 10. Check module parameters (if available)
