@@ -136,6 +136,7 @@ fi
 
 # 9. Build the driver
 log "Building NRC7292 driver..."
+cd "$DRIVER_DIR/package/src/nrc" || error_exit "Failed to cd to driver source: $DRIVER_DIR/package/src/nrc"
 
 log "Cleaning previous build..."
 sudo make clean || log "WARNING: make clean failed (may be normal if first build)"
