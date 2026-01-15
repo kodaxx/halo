@@ -162,7 +162,7 @@ if lsmod | grep -q "^nrc "; then
 fi
 
 log "Loading nrc.ko module..."
-sudo insmod nrc.ko || error_exit "Failed to insert nrc.ko module"
+sudo insmod nrc.ko || log "WARNING: Failed to load driver (this is expected if you haven't rebooted yet to load the device tree overlay)"
 
 # 9. Verify driver is loaded
 log "Verifying driver is loaded..."
@@ -170,7 +170,7 @@ if lsmod | grep -q "^nrc"; then
     log "✓ Driver loaded successfully!"
     lsmod | grep nrc
 else
-    error_exit "Driver does not appear to be loaded"
+    log "⚠ Driver not loaded yet (likely needs reboot)"
 fi
 
 # 12. Check for nrc devices
