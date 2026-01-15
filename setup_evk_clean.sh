@@ -76,6 +76,11 @@ sed -i 's/os.system("wpa_cli disable wlan0")/#os.system("wpa_cli disable wlan0")
 # Update: Use wildcard matching for killall because it has flags like -9
 sed -i 's/os.system("sudo killall.*wpa_supplicant.*")/#os.system("sudo killall -9 wpa_supplicant")/g' "$START_PY"
 
+# IMPORTANT: Prevent dhcpcd and NAT teardown which kills SSH
+sed -i 's/stopDHCPCD()/#stopDHCPCD()/g' "$START_PY"
+sed -i 's/stopNAT()/#stopNAT()/g' "$START_PY"
+
+
 # 5. Patch files recursively
 echo "Patching all scripts for user path..."
 # Ensure scripts are executable
