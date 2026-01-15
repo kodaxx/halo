@@ -83,5 +83,15 @@ find "$LOCAL_PKG_DIR" -type f \( -name "*.py" -o -name "*.sh" \) -exec chmod +x 
 # Replace /home/pi path in all .py, .sh, and .conf files
 find "$LOCAL_PKG_DIR" -type f \( -name "*.py" -o -name "*.sh" -o -name "*.conf" \) -print0 | xargs -0 sed -i "s|/home/pi/|$HOME/|g"
 
+# 6. Critical Patch: Switch NRC Interface to wlan1 (Preserve wlan0)
+echo "Patching start.py to use wlan1 for HaLow..."
+# Change function calls to use wlan1
+sed -i "s/run_ap('wlan0')/run_ap('wlan1')/g" "$START_PY"
+sed -i "s/run_sta('wlan0')/run_sta('wlan1')/g" "$START_PY"
+# Fix ifconfig check
+sed -i 's/subprocess.call(\["sudo", "ifconfig", "wlan0", "up"\])/subprocess.call(["sudo", "ifconfig", "wlan1", "up"])/g' "$START_PY"
+# Fix hostapd configuration files
+find "$LOCAL_PKG_DIR/script/conf" -name "*.conf" -print0 | xargs -0 sed -i "s/interface=wlan0/interface=wlan1/g"
+
 echo "Setup Complete."
 echo "To run AP mode: sudo $LOCAL_PKG_DIR/script/start.py 1 0 US"
