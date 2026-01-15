@@ -153,6 +153,14 @@ log "Driver compiled successfully: $(pwd)/nrc.ko"
 # 8. Load the driverlog "Loading kernel dependencies..."
 sudo modprobe cfg80211 || log "WARNING: cfg80211 already loaded or unavailable"
 sudo modprobe mac80211 || log "WARNING: mac80211 already loaded or unavailable"
+
+# Unload driver if already loaded from previous run
+if lsmod | grep -q "^nrc "; then
+    log "Driver already loaded from previous run, unloading first..."
+    sudo rmmod nrc || log "WARNING: Could not unload nrc module"
+    sleep 1
+fi
+
 log "Loading nrc.ko module..."
 sudo insmod nrc.ko || error_exit "Failed to insert nrc.ko module"
 

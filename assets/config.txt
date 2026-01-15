@@ -1,6 +1,7 @@
 # --- Halo Hardware Config ---
 # Enable SPI for Alfa HaLow HAT
-dtparam=spi=on
+dtoverlay=disable-spidev
+#dtparam=spi=on
 
 # Load NRC7292 device tree overlay (compiled during driver setup)
 dtoverlay=nrc-rpi
