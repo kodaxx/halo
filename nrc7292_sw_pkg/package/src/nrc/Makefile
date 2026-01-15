@@ -29,7 +29,9 @@ ccflags-y := \
 	-DCONFIG_NRC_HIF_CSPI \
 	-DENABLE_DYNAMIC_PS \
 	-DCONFIG_MAC80211_MESH \
-	-Wno-error
+	-Wno-error \
+	-Wno-missing-prototypes \
+	-Wno-incompatible-pointer-types
 
 ldflags-y += -T$(M)/nrc.lds
 
