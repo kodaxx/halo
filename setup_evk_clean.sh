@@ -74,7 +74,13 @@ if [ -f "$BINARY_DIR/nrc7292_cspi.bin" ]; then
     # Create the default link just in case
     cp "$BINARY_DIR/nrc7292_cspi.bin" "$LOCAL_PKG_DIR/sw/firmware/uni_s1g.bin"
     
-    echo "Firmware installed to $LOCAL_PKG_DIR/sw/firmware"
+    # CRITICAL: Install to system /lib/firmware for loading
+    echo "Installing to /lib/firmware..."
+    sudo cp "$LOCAL_PKG_DIR/sw/firmware/"* /lib/firmware/
+    # Driver looks for 'bd.dat' specifically in some versions
+    sudo cp "$LOCAL_PKG_DIR/sw/firmware/nrc7292_bd.dat" /lib/firmware/bd.dat
+    
+    echo "Firmware installed to $LOCAL_PKG_DIR/sw/firmware and /lib/firmware"
 else
     echo "Error: Firmware not found at $BINARY_DIR!"
     exit 1
@@ -91,7 +97,10 @@ find "$LOCAL_PKG_DIR" -type f \( -name "*.py" -o -name "*.sh" -o -name "copy" -o
 
 # 6. Patch start.py (Network Safety & wlan1 usage)
 START_PY="$LOCAL_PKG_DIR/script/start.py"
-echo "Patching start.py for wlan1 and network safety..."
+echo "Patching start.py for wlan1, network safety, and dependencies..."
+
+# Inject modprobe mac80211 at the top of run_common or main
+sed -i '/import sys/a import subprocess; subprocess.call(["sudo", "modprobe", "mac80211"])' "$START_PY"
 
 # Disable wlan0 interference
 sed -i '/wpa_cli disable wlan0/s/^/#/' "$START_PY"
@@ -116,5 +125,5 @@ fi
 
 echo "=== Setup Complete ==="
 echo "Driver compiled and installed."
-echo "Paths patched to $HOME."
+echo "Firmware copied to /lib/firmware/bd.dat."
 echo "To run AP mode: sudo $LOCAL_PKG_DIR/script/start.py 1 0 US"
