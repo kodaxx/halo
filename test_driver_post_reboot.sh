@@ -65,8 +65,8 @@ fi
 
 # 7. Check driver messages in dmesg
 log ""
-log "Recent driver messages:"
-dmesg | tail -10 | grep -E "nrc|NRC" || log "(No NRC messages found in recent logs)"
+log "Driver and device tree messages from dmesg:"
+dmesg | tail -30 | grep -E "nrc|NRC|nrc-rpi|dtb|overlay" || log "(No relevant messages found)"
 
 # 8. Check for wireless devices
 log ""
@@ -86,13 +86,46 @@ fi
 
 # 9. Check sysfs for NRC device
 log ""
-log "Checking /sys for NRC7292 driver..."
+log "Checking /sys for NRC7292 driver and SPI device..."
 if [ -d "/sys/class/net" ]; then
     NRC_SYS=$(ls /sys/class/net/ 2>/dev/null | grep -E "^wlan" || true)
     if [ -n "$NRC_SYS" ]; then
-        log "✓ NRC7292 detected in sysfs"
+        log "✓ Wireless devices in /sys/class/net:"
+        for dev in $NRC_SYS; do
+            log "  - $dev"
+        done
     else
         log "⚠ No wireless devices in /sys/class/net"
+    fi
+fi
+
+# Check for SPI devices
+log ""
+log "Checking SPI devices..."
+if [ -d "/sys/bus/spi/devices" ]; then
+    SPI_DEVS=$(ls /sys/bus/spi/devices/ 2>/dev/null || echo "none")
+    if [ "$SPI_DEVS" != "none" ]; then
+        log "SPI devices found:"
+        for dev in $SPI_DEVS; do
+            log "  - $dev"
+            if [ -f "/sys/bus/spi/devices/$dev/driver" ]; then
+                DRIVER=$(readlink "/sys/bus/spi/devices/$dev/driver" | xargs basename)
+                log "    Driver: $DRIVER"
+            fi
+        done
+    else
+        log "⚠ No SPI devices detected"
+    fi
+fi
+
+# Check device tree
+log ""
+log "Checking device tree for nrc overlay..."
+if [ -d "/sys/firmware/devicetree/base" ]; then
+    if grep -r "nrc" /sys/firmware/devicetree/base 2>/dev/null | head -3; then
+        log "✓ NRC found in device tree"
+    else
+        log "⚠ NRC not found in device tree (overlay may not have loaded)"
     fi
 fi
 
