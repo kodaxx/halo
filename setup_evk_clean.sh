@@ -71,14 +71,22 @@ echo "Patching $START_PY..."
 # Remove hardcoded 'pi' user expectation
 sed -i "s|/home/pi/|$HOME/|g" "$START_PY"
 
-# Comment out wlan0 disabling
-sed -i 's/os.system("wpa_cli disable wlan0")/#os.system("wpa_cli disable wlan0")/g' "$START_PY"
-# Update: Use wildcard matching for killall because it has flags like -9
-sed -i 's/os.system("sudo killall.*wpa_supplicant.*")/#os.system("sudo killall -9 wpa_supplicant")/g' "$START_PY"
+# 6. Patch start.py to prevent network disconnects using robust line commenting
+echo "Patching start.py to prevent network disconnects..."
+# Disable wlan0 interference
+sed -i '/wpa_cli disable wlan0/s/^/#/' "$START_PY"
+# Disable killing wpa_supplicant
+sed -i '/killall.*wpa_supplicant/s/^/#/' "$START_PY"
+# Disable stopping DHCPCD (Networking Service)
+sed -i '/stopDHCPCD()/s/^/#/' "$START_PY"
+# Disable stopping NAT (flushing iptables)
+sed -i '/stopNAT()/s/^/#/' "$START_PY"
 
-# IMPORTANT: Prevent dhcpcd and NAT teardown which kills SSH
-sed -i 's/stopDHCPCD()/#stopDHCPCD()/g' "$START_PY"
-sed -i 's/stopNAT()/#stopNAT()/g' "$START_PY"
+# 7. Fix hostname resolution (sudo warnings)
+if ! grep -q "127.0.0.1 $(hostname)" /etc/hosts; then
+    echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
+fi
+
 
 
 # 5. Patch files recursively
