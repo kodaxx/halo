@@ -22,7 +22,7 @@
 #include <linux/irqreturn.h>
 #include <linux/interrupt.h>
 #include <net/mac80211.h>
-#include <linux/unaligned.h>
+#include <asm/unaligned.h>
 #include <linux/smp.h>
 #ifdef CONFIG_SUPPORT_AFTER_KERNEL_3_0_36
 #include <linux/timekeeping.h>

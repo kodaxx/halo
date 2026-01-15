@@ -28,10 +28,7 @@ ccflags-y := \
 	-DDEBUG \
 	-DCONFIG_NRC_HIF_CSPI \
 	-DENABLE_DYNAMIC_PS \
-	-DCONFIG_MAC80211_MESH \
-	-Wno-error \
-	-Wno-missing-prototypes \
-	-Wno-incompatible-pointer-types
+	-DCONFIG_MAC80211_MESH
 
 ldflags-y += -T$(M)/nrc.lds
 
@@ -40,6 +37,9 @@ ifeq ($(TESTMODE), y)
 ccflags-y += \
 		-DTEST_SELF_GENERATION
 endif
+
+#ccflags-y += -Wall -Werror -g
+ccflags-y += -Wall -Werror
 
 all: modules
 
