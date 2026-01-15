@@ -1,19 +1,18 @@
 #!/bin/bash
 # setup_evk_clean.sh
-# Sets up the EVK environment using PREBUILT binaries on Bullseye.
-# Patches start.py to run as current user and preserve wlan0.
+# Complete EVK Setup with LOCAL COMPILATION and ROBUST PATH FIXING.
+# Handles: Driver Compilation, PATH patching, Start.py patching.
+
+set -e # Exit on error
 
 REPO_ROOT=$(pwd)
 # Robust root detection
-# 1. Check if we are running from within the repo (standard behavior)
 if [ -d "nrc7292_sw_pkg" ]; then
     REPO_ROOT=$(pwd)
-# 2. Check if the bootstrap script already cloned it to ~/halo
 elif [ -d "$HOME/halo/nrc7292_sw_pkg" ]; then
     REPO_ROOT="$HOME/halo"
     echo "Found existing repository at $REPO_ROOT"
 else
-    # 3. Fallback: Clone if necessary (rare if bootstrap was run)
     echo "Repo not found locally. Cloning kodaxx/halo to temp_repo..."
     git clone https://github.com/kodaxx/halo.git temp_repo
     if [ -d "temp_repo/nrc7292_sw_pkg" ]; then
@@ -26,10 +25,11 @@ fi
 
 SRC_EVK="$REPO_ROOT/nrc7292_sw_pkg/package/evk/sw_pkg/nrc_pkg"
 BINARY_DIR="$REPO_ROOT/nrc7292_sw_pkg/package/evk/binary"
+DRIVER_SRC="$REPO_ROOT/nrc7292_sw_pkg/package/src/nrc"
 LOCAL_PKG_DIR="$HOME/nrc_pkg"
 CURRENT_USER=$(whoami)
 
-echo "Setting up Clean EVK Environment in $LOCAL_PKG_DIR..."
+echo "===  Setting up Clean EVK Environment in $LOCAL_PKG_DIR for user $CURRENT_USER ==="
 
 # 1. Copy Generic EVK Package
 if [ -d "$LOCAL_PKG_DIR" ]; then
@@ -38,74 +38,69 @@ if [ -d "$LOCAL_PKG_DIR" ]; then
 fi
 cp -r "$SRC_EVK" "$LOCAL_PKG_DIR"
 
-# 2. install Prebuilt Driver
-echo "Installing prebuilt driver..."
-if [ -f "$BINARY_DIR/nrc.ko" ]; then
-    cp "$BINARY_DIR/nrc.ko" "$LOCAL_PKG_DIR/evk/binary/nrc.ko"
-    # Also link it where script/start.py expects it? 
-    # start.py looks in `evk/binary`? No, start.py is in `script/`.
-    # Let's check start.py logic in a moment. Usually it expects module in same dir or specific path.
-    # The default EVK structure has `evk` and `script` inside `nrc_pkg`.
-    # nrc.ko usually goes to `nrc_pkg/evk/binary/nrc.ko`.
+# 2. COMPILE DRIVER (Fix for Invalid Module Format)
+echo "Compiling Driver Locally..."
+cd "$DRIVER_SRC"
+make clean
+if make; then
+    echo "Driver Compiled Successfully."
+    cp "nrc.ko" "$LOCAL_PKG_DIR/sw/driver/nrc.ko"
+    # Also copy to evk/binary for consistency
+    mkdir -p "$LOCAL_PKG_DIR/evk/binary"
+    cp "nrc.ko" "$LOCAL_PKG_DIR/evk/binary/nrc.ko"
 else
-    echo "Error: Prebuilt nrc.ko not found!"
+    echo "ERROR: Driver compilation failed!"
     exit 1
 fi
 
-# 3. Install Prebuilt Firmware
-echo "Installing prebuilt firmware..."
-# start.py defaults to loading 'uni_s1g.bin'
+# 3. Install Firmware
+echo "Installing Firmware..."
 if [ -f "$BINARY_DIR/nrc7292_cspi.bin" ]; then
     cp "$BINARY_DIR/nrc7292_cspi.bin" "$LOCAL_PKG_DIR/evk/firmware/uni_s1g.bin"
-    # Also keep original name just in case
-    cp "$BINARY_DIR/nrc7292_cspi.bin" "$LOCAL_PKG_DIR/evk/firmware/nrc7292_cspi.bin"
+    # Ensure sw/firmware/copy uses correct names/paths if needed, or just manual copy
+    cp "$BINARY_DIR/nrc7292_cspi.bin" "$LOCAL_PKG_DIR/sw/firmware/nrc7292_cspi.bin"
+    cp "$BINARY_DIR/nrc7292_cspi.bin" "$LOCAL_PKG_DIR/sw/firmware/uni_s1g.bin" 
+    cp "$BINARY_DIR/nrc7292_bd.dat" "$LOCAL_PKG_DIR/sw/firmware/nrc7292_bd.dat"
 else
-    echo "Error: Prebuilt firmware not found!"
+    echo "Error: Firmware not found!"
     exit 1
 fi
 
-# 4. Patch start.py
+# 4. AGGRESSIVE PATH FIXING (Fix for /home/pi/ persistence)
+echo "Patching ALL paths from /home/pi/ to $HOME/ ..."
+# Use gre, find, and sed to replace /home/pi in ALL text files in the package
+grep -rl "/home/pi/" "$LOCAL_PKG_DIR" | xargs sed -i "s|/home/pi/|$HOME/|g"
+
+# 5. Fix Permissions
+echo "Fixing permissions..."
+find "$LOCAL_PKG_DIR" -type f \( -name "*.py" -o -name "*.sh" -o -name "copy" -o -name "cli_app" \) -exec chmod +x {} \;
+
+# 6. Patch start.py (Network Safety & wlan1 usage)
 START_PY="$LOCAL_PKG_DIR/script/start.py"
-echo "Patching $START_PY..."
+echo "Patching start.py for wlan1 and network safety..."
 
-# Remove hardcoded 'pi' user expectation
-sed -i "s|/home/pi/|$HOME/|g" "$START_PY"
-
-# 6. Patch start.py to prevent network disconnects using robust line commenting
-echo "Patching start.py to prevent network disconnects..."
 # Disable wlan0 interference
 sed -i '/wpa_cli disable wlan0/s/^/#/' "$START_PY"
 # Disable killing wpa_supplicant
 sed -i '/killall.*wpa_supplicant/s/^/#/' "$START_PY"
-# Disable stopping DHCPCD (Networking Service)
+# Disable stopping DHCPCD
 sed -i '/stopDHCPCD()/s/^/#/' "$START_PY"
-# Disable stopping NAT (flushing iptables)
+# Disable stopping NAT
 sed -i '/stopNAT()/s/^/#/' "$START_PY"
 
-# 7. Fix hostname resolution (sudo warnings)
-if ! grep -q "127.0.0.1 $(hostname)" /etc/hosts; then
-    echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
-fi
-
-
-
-# 5. Patch files recursively
-echo "Patching all scripts for user path..."
-# Ensure scripts are executable
-find "$LOCAL_PKG_DIR" -type f \( -name "*.py" -o -name "*.sh" \) -exec chmod +x {} \;
-
-# Replace /home/pi path in all .py, .sh, and .conf files
-find "$LOCAL_PKG_DIR" -type f \( -name "*.py" -o -name "*.sh" -o -name "*.conf" \) -print0 | xargs -0 sed -i "s|/home/pi/|$HOME/|g"
-
-# 6. Critical Patch: Switch NRC Interface to wlan1 (Preserve wlan0)
-echo "Patching start.py to use wlan1 for HaLow..."
-# Change function calls to use wlan1
+# Switch to wlan1
 sed -i "s/run_ap('wlan0')/run_ap('wlan1')/g" "$START_PY"
 sed -i "s/run_sta('wlan0')/run_sta('wlan1')/g" "$START_PY"
-# Fix ifconfig check
 sed -i 's/subprocess.call(\["sudo", "ifconfig", "wlan0", "up"\])/subprocess.call(["sudo", "ifconfig", "wlan1", "up"])/g' "$START_PY"
 # Fix hostapd configuration files
 find "$LOCAL_PKG_DIR/script/conf" -name "*.conf" -print0 | xargs -0 sed -i "s/interface=wlan0/interface=wlan1/g"
 
-echo "Setup Complete."
+# 7. Fix hostname resolution
+if ! grep -q "127.0.0.1 $(hostname)" /etc/hosts; then
+    echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
+fi
+
+echo "=== Setup Complete ==="
+echo "Driver compiled and installed."
+echo "Paths patched to $HOME."
 echo "To run AP mode: sudo $LOCAL_PKG_DIR/script/start.py 1 0 US"
