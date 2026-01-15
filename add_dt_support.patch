@@ -1,0 +1,30 @@
+--- a/package/src/nrc/nrc-hif-cspi.c
++++ b/package/src/nrc/nrc-hif-cspi.c
+@@ -37,6 +37,7 @@
+ /* include/linux/spi/spi.h */
+ #include <linux/spi/spi.h>
+ #include <linux/gpio.h>
++#include <linux/of.h>
+ #include "nrc-hif.h"
+ #include "nrc-debug.h"
+ 
+@@ -2575,8 +2576,15 @@
+ 
+ MODULE_DEVICE_TABLE(spi, nrc_spi_id);
+ 
++static const struct of_device_id nrc_of_match[] = {
++	{ .compatible = "newracom,nrc7292", },
++	{ .compatible = "nrc80211", },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, nrc_of_match);
++
+ static struct spi_driver nrc_cspi_driver = {
+ 	.id_table = nrc_spi_id,
+ 	.probe = nrc_cspi_probe,
+ 	.remove = nrc_cspi_remove,
+ 	.driver = {
+ 		.name = NRC_DRIVER_NAME,
++		.of_match_table = nrc_of_match,
+ 	},
+ };
