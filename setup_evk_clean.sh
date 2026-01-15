@@ -31,6 +31,10 @@ CURRENT_USER=$(whoami)
 
 echo "===  Setting up Clean EVK Environment in $LOCAL_PKG_DIR for user $CURRENT_USER ==="
 
+# Install Kernel Headers (Required for compilation)
+echo "Installing Kernel Headers..."
+sudo apt-get install -y raspberrypi-kernel-headers build-essential
+
 # 1. Copy Generic EVK Package
 if [ -d "$LOCAL_PKG_DIR" ]; then
     echo "Backing up existing nrc_pkg..."
@@ -40,7 +44,12 @@ cp -r "$SRC_EVK" "$LOCAL_PKG_DIR"
 
 # 2. COMPILE DRIVER (Fix for Invalid Module Format)
 echo "Compiling Driver Locally..."
+if [ ! -d "$DRIVER_SRC" ]; then
+    echo "ERROR: Driver source not found at $DRIVER_SRC"
+    exit 1
+fi
 cd "$DRIVER_SRC"
+echo "Current Directory: $(pwd)"
 make clean
 if make; then
     echo "Driver Compiled Successfully."
