@@ -73,7 +73,8 @@ sed -i "s|/home/pi/|$HOME/|g" "$START_PY"
 
 # Comment out wlan0 disabling
 sed -i 's/os.system("wpa_cli disable wlan0")/#os.system("wpa_cli disable wlan0")/g' "$START_PY"
-sed -i 's/os.system("sudo killall wpa_supplicant")/#os.system("sudo killall wpa_supplicant")/g' "$START_PY"
+# Update: Use wildcard matching for killall because it has flags like -9
+sed -i 's/os.system("sudo killall.*wpa_supplicant.*")/#os.system("sudo killall -9 wpa_supplicant")/g' "$START_PY"
 
 # 5. Patch files recursively
 echo "Patching all scripts for user path..."
