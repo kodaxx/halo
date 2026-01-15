@@ -126,7 +126,22 @@ sed -i 's/interface wlan0/interface wlan1/g' "$IP_CONFIG"
 sed -i 's/AP INTERFACE     : wlan0/AP INTERFACE     : wlan1/g' "$IP_CONFIG"
 sed -i 's/STA INTERFACE    : wlan0/STA INTERFACE    : wlan1/g' "$IP_CONFIG"
 
+# CRITICAL FIX: Prevent ip_config.sh from overwriting system dhcpcd.conf (which kills wlan0)
+# We comment out the copy command
+sed -i 's/sudo cp $DHCPCD_CONF_FILE \/etc\/dhcpcd.conf/#sudo cp $DHCPCD_CONF_FILE \/etc\/dhcpcd.conf/g' "$IP_CONFIG"
+
+# Instead, we safely APPEND the wlan1 config to /etc/dhcpcd.conf if not present
+echo "Safely configuring /etc/dhcpcd.conf for wlan1..."
+if ! grep -q "interface wlan1" /etc/dhcpcd.conf; then
+    echo "Appending wlan1 config to /etc/dhcpcd.conf"
+    echo "" | sudo tee -a /etc/dhcpcd.conf
+    echo "interface wlan1" | sudo tee -a /etc/dhcpcd.conf
+    echo "static ip_address=192.168.200.1/24" | sudo tee -a /etc/dhcpcd.conf
+    echo "nohook wpa_supplicant" | sudo tee -a /etc/dhcpcd.conf
+fi
+
 # 7. Fix hostname resolution
+
 if ! grep -q "127.0.0.1 $(hostname)" /etc/hosts; then
     echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
 fi
