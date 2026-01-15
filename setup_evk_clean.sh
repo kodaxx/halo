@@ -118,6 +118,14 @@ sed -i 's/subprocess.call(\["sudo", "ifconfig", "wlan0", "up"\])/subprocess.call
 # Fix hostapd configuration files
 find "$LOCAL_PKG_DIR/script/conf" -name "*.conf" -print0 | xargs -0 sed -i "s/interface=wlan0/interface=wlan1/g"
 
+# CRITICAL: Patch ip_config.sh to prevent it from hijacking wlan0
+# ip_config.sh writes to dhcpcd.conf. We must ensure it writes 'interface wlan1'
+IP_CONFIG="$LOCAL_PKG_DIR/script/conf/etc/ip_config.sh"
+echo "Patching ip_config.sh to use wlan1..."
+sed -i 's/interface wlan0/interface wlan1/g' "$IP_CONFIG"
+sed -i 's/AP INTERFACE     : wlan0/AP INTERFACE     : wlan1/g' "$IP_CONFIG"
+sed -i 's/STA INTERFACE    : wlan0/STA INTERFACE    : wlan1/g' "$IP_CONFIG"
+
 # 7. Fix hostname resolution
 if ! grep -q "127.0.0.1 $(hostname)" /etc/hosts; then
     echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
