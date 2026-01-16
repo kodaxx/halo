@@ -10,13 +10,12 @@ The workflow consists of three steps: **Build**, **Test**, and **Capture**.
 
 ---
 
-## 1. Build The Master (On Raspberry Pi)
-Use a fresh Raspberry Pi Zero 2 W (Bullseye) to create the master installation.
+## 1. Build The Master (2-Step Process)
+Use a fresh Raspberry Pi Zero 2 W (Bullseye).
 
 1.  Flash `Raspberry Pi OS Lite (32-bit)` to an SD Card.
 2.  Run `prepare_pi.sh` to set hostname, wifi, and user.
 3.  Boot the Pi, connect to internet, and SSH in.
-## 1. Build THE MASTER (2-Step Process)
 
 ### Step 1: Bootstrap (Run on Pi)
 SSH into your fresh Pi and run this. It will lock the kernel, clone the repo, and setup the overlay.
@@ -33,17 +32,20 @@ sudo ~/halo/dev_tools/build_step_two.sh
 **Action**: This compiles the driver, installs services, and prepares the system for capture.
 **Result**: A base image ready for shutdown and capture.
 
-## 2. Verify The Build (On Raspberry Pi)
-Before shutting down, verify the build is healthy.
+## 2. Verify and Cleanup (On Raspberry Pi)
+Before shutting down, verify the build is healthy and scrub it for release.
 
 1.  Run the Verify Script:
     ```bash
     sudo ./dev_tools/test_build.sh
     ```
     *   **Checks**: Loads the driver manually, checks for `wlan1` interface, verifies services are installed but disabled, checks `dmesg` for errors.
-2.  If Green/Pass, shutdown the Pi:
+
+2.  **Cleanup (CRITICAL) & Shutdown**
+    Remove your home WiFi credentials, SSH keys, and logs before capturing. This prevents leaking your secrets in the image.
     ```bash
-    sudo shutdown now
+    sudo ~/halo/dev_tools/prepare_for_release.sh
+    sudo shutdown -h now
     ```
 
 ## 3. Capture The Image (On Mac)
