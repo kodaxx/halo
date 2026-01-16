@@ -140,6 +140,13 @@ sed -i "s/run_mpp('wlan0'/run_mpp('wlan1'/g" "$START_PY"
 sed -i "s/run_mp('wlan0'/run_mp('wlan1'/g" "$START_PY"
 sed -i "s/run_map('wlan0'/run_map('wlan1'/g" "$START_PY"
 
+# CRITICAL FIX: Patch mesh.py (imported by start.py) which ALSO kills wpa_supplicant
+MESH_PY="$LOCAL_PKG_DIR/script/mesh.py"
+echo "Patching mesh.py..."
+sed -i '/killall.*wpa_supplicant/s/^/#/' "$MESH_PY"
+# Also prevent it from messing with bat0/wlan0 blindly if we are using manual setup
+sed -i '/batctl if del wlan0/s/^/#/' "$MESH_PY"
+
 # Update: Manually set IP for wlan1 since we disabled dhcpcd service restart
 sed -i 's/subprocess.call(\["sudo", "ifconfig", "wlan0", "up"\])/subprocess.call(["sudo", "ifconfig", "wlan1", "192.168.200.1", "up"])/g' "$START_PY"
 
