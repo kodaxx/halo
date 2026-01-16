@@ -21,23 +21,12 @@ error_exit() {
     exit 1
 }
 
-# 0. CRITICAL PRE-CHECK: Protect networking from dhcpcd
-log "Checking dhcpcd configuration..."
-# We need to ensure dhcpcd does NOT try to manage wlan1, br0 or bat0.
-# managing wlan1 manually means dhcpcd will fight us if we don't deny it.
+# 0. PRE-CHECK: networking interference
+# Note: install.sh should have handled this. We check just in case but proceed.
 if ! grep -q "denyinterfaces.*wlan1" /etc/dhcpcd.conf; then
-    log "WARNING: wlan1/br0/bat0 must be unmanaged by dhcpcd!"
-    log "Updating /etc/dhcpcd.conf..."
-    # Remove old deny lines to avoid duplicates
-    sudo sed -i '/denyinterfaces/d' /etc/dhcpcd.conf
-    echo "denyinterfaces wlan1 br0 bat0" | sudo tee -a /etc/dhcpcd.conf >/dev/null
-    log "--------------------------------------------------------"
-    log "Configuration updated. You MUST restart networking to apply."
-    log "Please run this command (your connection will drop briefly):"
-    log "   sudo systemctl restart dhcpcd"
-    log "Then connect again and run this script."
-    log "--------------------------------------------------------"
-    exit 1
+    log "WARNING: wlan1/br0/bat0 NOT denied in dhcpcd.conf. Network stability might be poor."
+    # We do NOT exit or restart here to prevent infinite restart loops in systemd.
+    # The user should re-run install.sh if this happens.
 fi
 
 # Create bridge using ip command

@@ -134,6 +134,18 @@ systemctl enable halo-web.service
 systemctl enable halo-mesh.service
 systemctl enable halo-monitor.service
 
+# 5b. Configure Networking (dhcpcd)
+log "Configuring DHCPCD (Preventing interference)..."
+if ! grep -q "denyinterfaces.*wlan1" /etc/dhcpcd.conf; then
+    log "Adding interfaces denial to /etc/dhcpcd.conf..."
+    # Remove old verify lines to avoid duplicates
+    sed -i '/denyinterfaces/d' /etc/dhcpcd.conf
+    # Append new configuration
+    echo "denyinterfaces wlan1 br0 bat0" >> /etc/dhcpcd.conf
+    # Restart dhcpcd immediately as part of install process
+    systemctl restart dhcpcd || log "Warning: dhcpcd restart failed (might not be running)"
+fi
+
 # 6. Install Default Config
 if [ ! -f /boot/halo.json ]; then
     cp halo.json /boot/halo.json
