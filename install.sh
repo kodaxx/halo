@@ -12,10 +12,21 @@ log() {
 }
 
 # Ensure we are running from the repo directory
+# Ensure we are running from the repo directory
 cd "$(dirname "$0")"
 REPO_DIR=$(pwd)
-USER_HOME=$(eval echo ~${SUDO_USER:-$USER})
-USER_NAME="${SUDO_USER:-$USER}"
+
+# Detect the Real User (Owner of the repo)
+# When running via systemd (Phase 2), SUDO_USER is empty and USER is root.
+# We want to install for the user who owns this directory (e.g., 'halo' or 'pi').
+USER_NAME=$(stat -c '%U' "$REPO_DIR")
+if [ "$USER_NAME" == "root" ]; then
+    # Fallback to sudo user if repo is owned by root? Or just use root.
+    USER_NAME="${SUDO_USER:-root}"
+fi
+
+# Detect Home Directory
+USER_HOME=$(eval echo "~$USER_NAME")
 
 if [ "$EUID" -ne 0 ]; then
     log "Please run as root (sudo ./install.sh)"
