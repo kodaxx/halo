@@ -146,10 +146,34 @@ if ! grep -q "denyinterfaces.*wlan1" /etc/dhcpcd.conf; then
     systemctl restart dhcpcd || log "Warning: dhcpcd restart failed (might not be running)"
 fi
 
-# 6. Install Default Config
+# 6. Install Default Config & Assets
 if [ ! -f /boot/halo.json ]; then
     cp halo.json /boot/halo.json
     log "Default config installed to /boot/halo.json"
+fi
+
+# 6b. Setup AP Mode (wlan0)
+log "Configuring Access Point (wlan0)..."
+if [ -f "assets/hostapd.conf" ]; then
+    cp assets/hostapd.conf /etc/hostapd/hostapd.conf
+    # Point default to config
+    sed -i 's|#DAEMON_CONF=""|DAEMON_CONF="/etc/hostapd/hostapd.conf"|g' /etc/default/hostapd
+    systemctl unmask hostapd
+    systemctl enable hostapd
+fi
+
+if [ -f "assets/dnsmasq.conf" ]; then
+    cp assets/dnsmasq.conf /etc/dnsmasq.d/halo-ap.conf
+    systemctl restart dnsmasq
+fi
+
+# 6c. Setup Provisioning Script
+if [ -f "assets/provision_wifi.sh" ]; then
+    cp assets/provision_wifi.sh "$USER_HOME/halo/provision_wifi.sh"
+    chmod +x "$USER_HOME/halo/provision_wifi.sh"
+    # Ensure service file uses correct path
+    sed -i "s|/home/halo|$USER_HOME|g" /etc/systemd/system/halo-provision.service
+    systemctl enable halo-provision.service
 fi
 
 # 7. Cleanup Bootstrap
