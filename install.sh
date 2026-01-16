@@ -58,6 +58,12 @@ setup_ap() {
         DEST_PROV="$USER_HOME/halo/provision_wifi.sh"
         cp assets/provision_wifi.sh "$DEST_PROV"
         chmod +x "$DEST_PROV"
+        
+        # Ensure service file exists before sed
+        if [ -f "services/halo-provision.service" ]; then
+             cp services/halo-provision.service /etc/systemd/system/
+        fi
+        
         sed -i "s|/home/halo|$USER_HOME|g" /etc/systemd/system/halo-provision.service
         systemctl enable halo-provision.service
         
