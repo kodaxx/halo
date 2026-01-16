@@ -146,15 +146,29 @@ if ip link show wlan1 | grep -q "NO-CARRIER"; then
     # sudo pkill -f "wpa_supplicant.*wlan1" || true  <-- Even this is risky if the pattern matches generic.
     # Better to just proceed. The driver will error if busy, which is better than losing SSH.
     
-    # 1. Set Mode to Mesh Point
-    log "Setting wlan1 to mesh point mode..."
+    # 1. Set Mode (Try 'mesh', then 'mp', then 'ibss')
+    log "Setting wlan1 to mesh mode..."
     sudo ip link set wlan1 down
-    sudo iw dev wlan1 set type mesh_point
+    
+    if sudo iw dev wlan1 set type mesh 2>/dev/null; then
+        log "Mode set to 'mesh'"
+    elif sudo iw dev wlan1 set type mp 2>/dev/null; then
+        log "Mode set to 'mp'"
+    elif sudo iw dev wlan1 set type ibss 2>/dev/null; then
+        log "Mode set to 'ibss' (Ad-Hoc Fallback)"
+    else
+        log "ERROR: Failed to set mesh/mp/ibss mode. Driver capabilities might be limited."
+    fi
+    
     sudo ip link set wlan1 up
     
     # 2. Join Mesh
     log "Joining mesh $MESH_ID on freq $FREQ MHz..."
-    sudo iw dev wlan1 mesh join "$MESH_ID" freq "$FREQ"
+    if ip link show wlan1 | grep -q "ibss"; then
+        sudo iw dev wlan1 ibss join "$MESH_ID" "$FREQ"
+    else
+        sudo iw dev wlan1 mesh join "$MESH_ID" freq "$FREQ"
+    fi
     
     sleep 2
     if ip link show wlan1 | grep -q "NO-CARRIER"; then
