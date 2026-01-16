@@ -44,8 +44,9 @@ EOF
 # 3. Inject Other Files (pi_files) if they exist
 PI_FILES_DIR="./pi_files"
 if [ -d "$PI_FILES_DIR" ]; then
-    echo "Copying contents of pi_files to SD card..."
-    cp -r "$PI_FILES_DIR/"* "$BOOT_VOL/"
+    echo "Copying contents of pi_files to SD card (excluding images)..."
+    # Use rsync to exclude huge image files and system junk
+    rsync -av --exclude="*.img" --exclude="*.xz" --exclude=".DS_Store" "$PI_FILES_DIR/" "$BOOT_VOL/"
 else
     echo "No pi_files directory found, skipping file injection."
 fi
