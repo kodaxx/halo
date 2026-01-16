@@ -1,5 +1,4 @@
 #!/bin/bash
-# prepare_for_release.sh
 # Removes sensitive data (WiFi creds, SSH keys, logs) to prepare for Golden Image capture.
 # Run this on the Raspberry Pi just before shutting down.
 
@@ -11,7 +10,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "========================================================"
-echo "   HALO GOLDEN IMAGE CLEANUP"
+echo "   HALO BASE IMAGE CLEANUP"
 echo "========================================================"
 
 # 1. Remove WiFi Credentials
