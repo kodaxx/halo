@@ -185,6 +185,16 @@ if ! grep -q "127.0.0.1 $(hostname)" /etc/hosts; then
     echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
 fi
 
+# CRITICAL FIX: Patch start_mesh.sh path
+# Because it runs as root, $HOME becomes /root, but we installed to /home/halo/nrc_pkg
+START_MESH_SCRIPT="$REPO_ROOT/scripts/start_mesh.sh"
+if [ -f "$START_MESH_SCRIPT" ]; then
+    echo "Patching start_mesh.sh with absolute driver path..."
+    # Escape path for sed
+    SAFE_PKG_DIR=$(echo "$LOCAL_PKG_DIR" | sed 's/\//\\\//g')
+    sed -i "s|DRIVER_DIR=\"\$HOME/nrc_pkg\"|DRIVER_DIR=\"$LOCAL_PKG_DIR\"|g" "$START_MESH_SCRIPT"
+fi
+
 echo "Driver compiled and installed."
 echo "Firmware copied to /lib/firmware/bd.dat."
 
