@@ -208,6 +208,10 @@ HTML_TEMPLATE = """
 
     <button type="submit">💾 Save & Reboot</button>
   </form>
+  
+  <div style="text-align: center; margin-top: 20px;">
+    <a href="/logs" style="color: #666; text-decoration: none; font-size: 14px;">View System Logs &raquo;</a>
+  </div>
 </div>
 </body>
 </html>
@@ -375,6 +379,81 @@ def index():
             return f"Error: Could not write configuration ({e})", 500
     
     return render_template_string(HTML_TEMPLATE, conf=conf, freq_map=FREQ_MAP)
+
+def get_system_logs():
+    """Fetch recent logs from systemd and kernel"""
+    logs = {}
+    
+    commands = {
+        'Mesh Service': ['journalctl', '-u', 'halo-mesh.service', '-n', '50', '--no-pager'],
+        'Monitor Service': ['journalctl', '-u', 'halo-monitor.service', '-n', '50', '--no-pager'],
+        'Web Admin': ['journalctl', '-u', 'halo-web.service', '-n', '20', '--no-pager'],
+        'Kernel (dmesg)': ['dmesg', '-T', '|', 'tail', '-n', '50']
+    }
+
+    for name, cmd in commands.items():
+        try:
+            # Handle pipes for dmesg
+            if '|' in cmd:
+                # simpler to just run dmesg tail
+                output = subprocess.check_output("dmesg -T | tail -n 50", shell=True).decode('utf-8', errors='replace')
+            else:
+                output = subprocess.check_output(cmd).decode('utf-8', errors='replace')
+            logs[name] = output
+        except Exception as e:
+            logs[name] = f"Error fetching logs: {e}"
+            
+    return logs
+
+@app.route('/logs', methods=['GET'])
+def view_logs():
+    """Log viewer endpoint"""
+    logs = get_system_logs()
+    
+    LOG_TEMPLATE = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Halo System Logs</title>
+    <style>
+      body { font-family: monospace; background: #222; color: #ccc; padding: 20px; }
+      h1 { color: #fff; text-align: center; }
+      .nav { text-align: center; margin-bottom: 20px; }
+      a { color: #007bff; text-decoration: none; font-size: 16px; margin: 0 10px; }
+      .log-box { background: #000; border: 1px solid #444; border-radius: 5px; padding: 15px; margin-bottom: 20px; overflow-x: auto; }
+      h2 { color: #87ceeb; margin-top: 0; font-size: 14px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+      pre { margin: 0; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; }
+      .timestamp { color: #666; }
+    </style>
+    </head>
+    <body>
+      <h1>📜 System Logs</h1>
+      <div class="nav">
+        <a href="/">« Back to Settings</a>
+        <a href="/logs">↻ Refresh Logs</a>
+      </div>
+      
+      {% for name, content in logs.items() %}
+      <div class="log-box">
+        <h2>{{ name }}</h2>
+        <pre>{{ content }}</pre>
+      </div>
+      {% endfor %}
+    </body>
+    </html>
+    """
+    return render_template_string(LOG_TEMPLATE, logs=logs)
+
+@app.route('/reboot', methods=['POST'])
+def reboot_system():
+    try:
+        subprocess.Popen(['sudo', 'reboot'])
+        return "System rebooting...", 200
+    except Exception as e:
+        return str(e), 500
+
 
 @app.route('/health', methods=['GET'])
 def health():
