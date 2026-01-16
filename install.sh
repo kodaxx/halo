@@ -225,8 +225,6 @@ cp services/*.service /etc/systemd/system/
 # Fix paths in services to match the actual REPO location
 # Services use placeholder /home/halo/halo, we replace it with $REPO_DIR
 sed -i "s|/home/halo/halo|$REPO_DIR|g" /etc/systemd/system/halo-*.service
-# Fallback: just in case some used /home/halo without the double halo
-sed -i "s|/home/halo|$REPO_DIR|g" /etc/systemd/system/halo-*.service
 
 systemctl daemon-reload
 systemctl enable halo-web.service
