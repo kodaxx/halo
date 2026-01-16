@@ -164,28 +164,52 @@ fi
 
 if [ -f "assets/dnsmasq.conf" ]; then
     cp assets/dnsmasq.conf /etc/dnsmasq.d/halo-ap.conf
-    systemctl restart dnsmasq
+    # Note: We rely on gateway_monitor.sh for dnsmasq, but this file is good backup
 fi
 
-# 6c. Setup Provisioning Script
+# 6c. Setup Provisioning Script (AND RUN IT NOW)
 if [ -f "assets/provision_wifi.sh" ]; then
-    cp assets/provision_wifi.sh "$USER_HOME/halo/provision_wifi.sh"
-    chmod +x "$USER_HOME/halo/provision_wifi.sh"
+    DEST_PROV="$USER_HOME/halo/provision_wifi.sh"
+    cp assets/provision_wifi.sh "$DEST_PROV"
+    chmod +x "$DEST_PROV"
     # Ensure service file uses correct path
     sed -i "s|/home/halo|$USER_HOME|g" /etc/systemd/system/halo-provision.service
     systemctl enable halo-provision.service
+    
+    # Run NOW to generate credentials before reboot
+    log "Generating Wi-Fi Credentials..."
+    bash "$DEST_PROV"
+    
+    # DISPLAY CREDENTIALS
+    if [ -f /boot/wifi_credentials.txt ]; then
+        echo ""
+        echo "========================================================"
+        echo "   HALO APPLIANCE SETUP COMPLETE - SAVE THESE NOW!"
+        echo "========================================================"
+        cat /boot/wifi_credentials.txt
+        echo "========================================================"
+        echo ""
+    fi
 fi
 
-# 7. Cleanup Bootstrap
+# 7. Cleanup & Final Security
 log "Disabling bootstrap service..."
 systemctl disable halo-bootstrap.service
 rm /etc/systemd/system/halo-bootstrap.service
 systemctl daemon-reload
 
-log "=== Installation Complete! ==="
-log "Starting services..."
-systemctl start halo-web.service
-systemctl start halo-mesh.service
-systemctl start halo-monitor.service
+# 8. Final Network Lockdown
+# We delayed denying wlan0 until now to keep your SSH alive during install
+log "Locking down wlan0 for AP mode..."
+sed -i '/denyinterfaces/d' /etc/dhcpcd.conf
+echo "denyinterfaces wlan1 br0 bat0 wlan0" >> /etc/dhcpcd.conf
 
-log "Done. Web Admin should be accessible."
+log "=== INSTALLATION SUCCESSFUL ==="
+log "The system will REBOOT in 30 seconds."
+log "Your current SSH connection will drop."
+log "After reboot, connect to the Wi-Fi network shown above."
+log "Access the Web Admin at: http://10.0.0.1"
+log "Rebooting in 30s..."
+
+sleep 30
+reboot

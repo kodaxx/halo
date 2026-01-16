@@ -84,6 +84,8 @@ log "Configuration: MESH_ID=$MESH_ID, FREQ=$FREQ, COUNTRY=$COUNTRY"
 # 2. Setup Bridge (br0)
 log "Setting up br0 bridge..."
 create_bridge "br0"
+# CRITICAL: Bridge wlan0 (AP) so connected phones can access the mesh
+bridge_add_if "br0" "wlan0"
 
 # 3. Initialize HaLow Radio
 if [ ! -f "$SCRIPT_PATH" ]; then
