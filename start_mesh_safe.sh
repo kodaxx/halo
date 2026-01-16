@@ -105,6 +105,16 @@ if [ -f "$TARGET_CONF" ]; then
     sudo sed -i "s/frequency=.*/frequency=$FREQ/g" "$TARGET_CONF"
     sudo sed -i "s/freq_list=.*/freq_list=$FREQ/g" "$TARGET_CONF"
     sudo sed -i "s/scan_freq=.*/scan_freq=$FREQ/g" "$TARGET_CONF"
+
+    # CRITICAL: Sanitize config for standard wpa_supplicant
+    # The NRC driver includes custom parameters that standard wpa_supplicant rejects
+    sudo sed -i '/dot11MeshRetryTimeout/d' "$TARGET_CONF"
+    sudo sed -i '/dot11MeshHoldingTimeout/d' "$TARGET_CONF"
+    sudo sed -i '/dot11MeshMaxRetries/d' "$TARGET_CONF"
+    sudo sed -i '/mesh_rssi_threshold/d' "$TARGET_CONF"
+    sudo sed -i '/mesh_basic_rates/d' "$TARGET_CONF"
+    sudo sed -i '/mesh_max_inactivity/d' "$TARGET_CONF"
+    sudo sed -i '/ignore_old_scan_res/d' "$TARGET_CONF"
 else
     log "WARNING: Config file not found at $TARGET_CONF"
 fi
