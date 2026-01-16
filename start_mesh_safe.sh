@@ -214,6 +214,11 @@ sudo ip link set br0 up
 log "Disabling multicast snooping on br0..."
 echo 0 | sudo tee /sys/devices/virtual/net/br0/bridge/multicast_snooping > /dev/null
 
+# 8. Restart AP Services (Critical: Ensure they bind to br0)
+log "Restarting dnsmasq and hostapd to bind to br0..."
+sudo systemctl restart dnsmasq || log "WARNING: dnsmasq restart failed"
+sudo systemctl restart hostapd || log "WARNING: hostapd restart failed"
+
 log "=== Halo Mesh Startup Complete ==="
 log "Mesh Interface: bat0 (inside br0)"
 log "Management Interface: wlan0 (Keep Alive!)"
