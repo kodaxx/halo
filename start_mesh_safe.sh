@@ -74,12 +74,12 @@ log "=== Halo Mesh Startup (Safe Mode) ==="
 if [ -f "$CONFIG_FILE" ]; then
     log "Loading configuration from $CONFIG_FILE"
     MESH_ID=$(grep -o '"mesh_id": "[^"]*' "$CONFIG_FILE" | grep -o '[^"]*$' || echo "HaloNet")
-    FREQ=$(grep -o '"freq": "[^"]*' "$CONFIG_FILE" | grep -o '[^"]*$' || echo "915") # Default to 915MHz (US ISM Center)
+    FREQ=$(grep -o '"freq": "[^"]*' "$CONFIG_FILE" | grep -o '[^"]*$' || echo "921") # Default to 921MHz (Chan 159, 2MHz BW)
     COUNTRY=$(grep -o '"country": "[^"]*' "$CONFIG_FILE" | grep -o '[^"]*$' || echo "US")
 else
     log "Config file not found, using defaults"
     MESH_ID="HaloNet"
-    FREQ="915"
+    FREQ="921"
     COUNTRY="US"
 fi
 
