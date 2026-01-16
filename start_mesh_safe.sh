@@ -166,6 +166,10 @@ if ! ip link show wlan1 | grep -q "state UP"; then
     sudo ip link set wlan1 up
     
     # 2. Join Mesh
+    log "Setting regulatory domain to $COUNTRY..."
+    sudo iw reg set "$COUNTRY"
+    sleep 1
+    
     log "Joining mesh $MESH_ID on freq $FREQ MHz..."
     if ip link show wlan1 | grep -q "ibss"; then
         sudo iw dev wlan1 ibss join "$MESH_ID" "$FREQ"
