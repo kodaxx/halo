@@ -15,9 +15,10 @@ if ! command -v git &> /dev/null; then
     # 1. Allow release info changes (bullseye stable -> oldstable etc)
     # 2. If update fails (hash mismatch), clear lists and retry
     if ! sudo apt-get update --allow-releaseinfo-change; then
-        echo "APT Update failed. Clearing lists and retrying..."
+        echo "APT Update failed. Clearing lists and retrying with aggressive fix..."
         sudo rm -rf /var/lib/apt/lists/*
-        sudo apt-get update --allow-releaseinfo-change
+        # Use || true to proceed even if the 'archive' repo fails (git is in main repo)
+        sudo apt-get update --allow-releaseinfo-change -o Acquire::http::Pipeline-Depth=0 -o Acquire::http::No-Cache=True -o Acquire::BrokenProxy=true || echo "Update finished with errors. Proceeding anyway..."
     fi
     sudo apt-get install -y git
 fi

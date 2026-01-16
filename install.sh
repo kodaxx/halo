@@ -84,7 +84,7 @@ if ! grep -q "dtoverlay=nrc-rpi" /boot/config.txt; then
     if ! apt-get update --allow-releaseinfo-change; then
         log "APT Update failed. Clearing lists and retrying..."
         rm -rf /var/lib/apt/lists/*
-        apt-get update --allow-releaseinfo-change
+        apt-get update --allow-releaseinfo-change -o Acquire::http::Pipeline-Depth=0 -o Acquire::http::No-Cache=True -o Acquire::BrokenProxy=true || log "Update finished with errors. Proceeding..."
     fi
     apt-get install -y git device-tree-compiler raspberrypi-kernel-headers build-essential hostapd python3-flask python3-pip iptables bridge-utils batctl
     
