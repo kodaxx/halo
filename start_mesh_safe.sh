@@ -8,6 +8,7 @@ set -e  # Exit on error
 CONFIG_FILE="/boot/halo.json"
 DRIVER_DIR="$HOME/nrc_pkg"
 SCRIPT_PATH="$DRIVER_DIR/script/start.py"
+CONF_DIR="$DRIVER_DIR/script/conf"
 
 # Logging helper
 log() {
@@ -22,7 +23,6 @@ error_exit() {
 
 # 0. CRITICAL PRE-CHECK: Protect networking from dhcpcd
 log "Checking dhcpcd configuration..."
-# We need to ensure dhcpcd does NOT try to manage br0 or bat0, or it will kill the connection
 if ! grep -q "denyinterfaces br0" /etc/dhcpcd.conf; then
     log "WARNING: br0 is not protected from dhcpcd!"
     log "Adding 'denyinterfaces br0 bat0' to /etc/dhcpcd.conf..."
@@ -40,7 +40,6 @@ fi
 create_bridge() {
     local br_name=$1
     log "Creating bridge $br_name"
-    # Check if bridge exists first
     if ip link show "$br_name" >/dev/null 2>&1; then
         log "Bridge $br_name already exists"
         sudo ip link set "$br_name" up
@@ -71,41 +70,54 @@ log "=== Halo Mesh Startup (Safe Mode) ==="
 if [ -f "$CONFIG_FILE" ]; then
     log "Loading configuration from $CONFIG_FILE"
     MESH_ID=$(grep -o '"mesh_id": "[^"]*' "$CONFIG_FILE" | grep -o '[^"]*$' || echo "HaloNet")
-    FREQ=$(grep -o '"freq": "[^"]*' "$CONFIG_FILE" | grep -o '[^"]*$' || echo "915")
+    FREQ=$(grep -o '"freq": "[^"]*' "$CONFIG_FILE" | grep -o '[^"]*$' || echo "924") # Default to 924MHz (approx Ch 40?)
     COUNTRY=$(grep -o '"country": "[^"]*' "$CONFIG_FILE" | grep -o '[^"]*$' || echo "US")
 else
     log "Config file not found, using defaults"
     MESH_ID="HaloNet"
-    FREQ="915"
+    FREQ="924"
     COUNTRY="US"
 fi
 
 log "Configuration: MESH_ID=$MESH_ID, FREQ=$FREQ, COUNTRY=$COUNTRY"
+# Convert FREQ to MHz if it's small? 
+# If FREQ < 1000, assume it is MHz. If < 200, assume channel? 
+# Start.py usage says "channel". wpa_supplicant needs "frequency" (MHz).
+# NRC7292 usually treats 902-928MHz. 
+# Let's assume FREQ is in MHz.
 
 # 2. Setup Bridge (br0)
 log "Setting up br0 bridge..."
 create_bridge "br0"
-# CRITICAL: Do NOT add wlan0 to bridge, or we lose SSH
-# bridge_add_if "br0" "wlan0"
 
 # 3. Initialize HaLow Radio
 if [ ! -f "$SCRIPT_PATH" ]; then
     error_exit "NRC startup script not found: $SCRIPT_PATH"
 fi
 
+# Pre-configure the wpa_supplicant conf file with SSID and Freq
+# Target: mp_halow_open.conf (assuming Open security for internal mesh)
+TARGET_CONF="$CONF_DIR/$COUNTRY/mp_halow_open.conf"
+if [ -f "$TARGET_CONF" ]; then
+    log "Patching config: $TARGET_CONF"
+    sudo sed -i "s/ssid=\".*\"/ssid=\"$MESH_ID\"/g" "$TARGET_CONF"
+    # Replace all frequency lines
+    sudo sed -i "s/frequency=.*/frequency=$FREQ/g" "$TARGET_CONF"
+    sudo sed -i "s/freq_list=.*/freq_list=$FREQ/g" "$TARGET_CONF"
+    sudo sed -i "s/scan_freq=.*/scan_freq=$FREQ/g" "$TARGET_CONF"
+else
+    log "WARNING: Config file not found at $TARGET_CONF"
+fi
+
 # Ensure previous instances are killed - BE GENTLE
-# Checking if nrc.ko is loaded
 if lsmod | grep -q "nrc"; then
     log "Driver already loaded."
 else
-    log "Driver not loaded. Checking wpa_supplicant..."
-    # Only kill wpa_supplicant if it's interfering? 
-    # Actually, we need to load the driver.
-    
     log "Initializing HaLow radio..."
     cd "$DRIVER_DIR/script"
-    # Args: Mode(4=MeshAP), ???(0), Country, Freq, MeshID
-    sudo python3 "$SCRIPT_PATH" 4 0 "$COUNTRY" "$FREQ" "$MESH_ID" || error_exit "HaLow initialization failed"
+    # Args: Type(4=Mesh), Security(0=Open), Country(US), MeshMode(1=MeshPoint)
+    # Note: Freq and ID are now in the .conf file
+    sudo python3 "$SCRIPT_PATH" 4 0 "$COUNTRY" 1 || error_exit "HaLow initialization failed"
 fi
 
 # 4. Start Batman-adv
@@ -118,6 +130,10 @@ sleep 2
 if ! ip link show wlan1 >/dev/null 2>&1; then
     error_exit "wlan1 interface not found!"
 fi
+
+# CRITICAL: Disable HW Mesh Forwarding so Batman can take over
+log "Disabling HW Mesh Forwarding..."
+sudo iw dev wlan1 set mesh_param mesh_fwding 0 || log "WARNING: Failed to set mesh_fwding (might be already 0)"
 
 sudo batctl if add wlan1 || log "WARNING: Failed to add wlan1 to batman-adv (already added?)"
 
