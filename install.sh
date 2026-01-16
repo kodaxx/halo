@@ -41,10 +41,16 @@ setup_ap() {
     
     # 1. Hostapd Config
     if [ -f "assets/hostapd.conf" ]; then
-        cp assets/hostapd.conf /etc/hostapd/hostapd.conf
-        sed -i 's|#DAEMON_CONF=""|DAEMON_CONF="/etc/hostapd/hostapd.conf"|g' /etc/default/hostapd
-        systemctl unmask hostapd
-        systemctl enable hostapd
+        # Check if already provisioned (avoid overwriting valid config)
+        if grep -q "Halo_SETUP" /etc/hostapd/hostapd.conf 2>/dev/null || [ ! -f /etc/hostapd/hostapd.conf ]; then
+             log "Installing/Resetting Hostapd Config..."
+             cp assets/hostapd.conf /etc/hostapd/hostapd.conf
+             sed -i 's|#DAEMON_CONF=""|DAEMON_CONF="/etc/hostapd/hostapd.conf"|g' /etc/default/hostapd
+             systemctl unmask hostapd
+             systemctl enable hostapd
+        else
+             log "Hostapd already provisioned (preserving existing config)."
+        fi
     fi
 
     # 2. Dnsmasq Config
