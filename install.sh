@@ -199,8 +199,11 @@ sed -i "s/run_mp('wlan0'/run_mp('wlan1'/g" "$START_PY"
 # 5. Install Services
 log "Installing Systemd Services..."
 cp services/*.service /etc/systemd/system/
-# Fix paths in services to match $USER_HOME if needed (assuming /home/halo for now based on previous work, but lets be safe)
-sed -i "s|/home/halo|$USER_HOME|g" /etc/systemd/system/halo-*.service
+# Fix paths in services to match the actual REPO location
+# Services use placeholder /home/halo/halo, we replace it with $REPO_DIR
+sed -i "s|/home/halo/halo|$REPO_DIR|g" /etc/systemd/system/halo-*.service
+# Fallback: just in case some used /home/halo without the double halo
+sed -i "s|/home/halo|$REPO_DIR|g" /etc/systemd/system/halo-*.service
 
 systemctl daemon-reload
 systemctl enable halo-web.service
