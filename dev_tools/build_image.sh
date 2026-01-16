@@ -67,6 +67,12 @@ if ! grep -q "g_ether" /etc/modules; then
      echo "g_ether" >> /etc/modules
 fi
 
+# 3. Disable Bluetooth (Save power/interference)
+if ! grep -q "dtoverlay=disable-bt" /boot/config.txt; then
+    echo "dtoverlay=disable-bt" >> /boot/config.txt
+    log "Bluetooth disabled (disable-bt)"
+fi
+
 
 # 3. Setup Local EVK Directory & Compile Driver
 LOCAL_PKG_DIR="$USER_HOME/nrc_pkg"
