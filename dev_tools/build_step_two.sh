@@ -5,21 +5,18 @@
 set -e # Exit on error
 
 REPO_ROOT=$(pwd)
-# Robust root detection
-if [ -d "nrc7292" ]; then
-    REPO_ROOT=$(pwd)
-elif [ -d "$HOME/halo/nrc7292" ]; then
+# 1. Locate Repo (Step One put it in ~/halo)
+if [ -d "$HOME/halo/nrc7292" ]; then
     REPO_ROOT="$HOME/halo"
-    echo "Found existing repository at $REPO_ROOT"
+    echo "Found repository at $REPO_ROOT"
+elif [ -d "nrc7292" ]; then
+    REPO_ROOT=$(pwd)
+    echo "Running from inside repo."
 else
-    echo "Repo not found locally. Cloning kodaxx/halo to temp_repo..."
-    git clone https://github.com/kodaxx/halo.git temp_repo
-    if [ -d "temp_repo/nrc7292" ]; then
-        REPO_ROOT="$(pwd)/temp_repo"
-    else
-        echo "Error: Failed to clone repository."
-        exit 1
-    fi
+    echo "Error: 'nrc7292' folder not found."
+    echo "Please run this script from inside the 'halo' repo, or ensure '~/halo' exists."
+    echo "Did you run build_step_one.sh?"
+    exit 1
 fi
 
 SRC_EVK="$REPO_ROOT/nrc7292/package/evk/sw_pkg/nrc_pkg"
@@ -184,7 +181,6 @@ if ! grep -q "127.0.0.1 $(hostname)" /etc/hosts; then
     echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
 fi
 
-echo "=== Setup Complete ==="
 echo "Driver compiled and installed."
 echo "Firmware copied to /lib/firmware/bd.dat."
 

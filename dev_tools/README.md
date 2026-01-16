@@ -15,19 +15,22 @@ Use a fresh Raspberry Pi (Bookworm or newer) to create the master installation.
 
 1.  Flash `Raspberry Pi OS Lite (64-bit)` to an SD Card.
 2.  Boot the Pi, connect to internet, and SSH in.
-3.  **Run the One-Line Builder:**
-    ```bash
-    curl -sL https://raw.githubusercontent.com/kodaxx/halo/main/dev_tools/bootstrap_build.sh | bash
-    ```
-    *   **What it does**: Installs Git, clones this repo, and runs `build_image.sh`.
-    *   **Result**: A fully prepped system that behaves like a normal Pi (SSH works, WiFi is managed by standard OS).
+## 1. Build THE MASTER (2-Step Process)
 
-> **Manual Method:**
-> ```bash
-> git clone https://github.com/kodaxx/halo.git
-> cd halo
-> sudo ./dev_tools/build_image.sh
-> ```
+### Step 1: Bootstrap (Run on Pi)
+SSH into your fresh Pi and run this. It will lock the kernel, clone the repo, and setup the overlay.
+```bash
+curl -sL https://raw.githubusercontent.com/kodaxx/halo/main/dev_tools/build_step_one.sh | bash
+```
+**Action**: The system will ask you to **REBOOT**. Do it (`sudo reboot`).
+
+### Step 2: Finalize (Run on Pi after Reboot)
+SSH back in and run:
+```bash
+sudo ~/halo/dev_tools/build_step_two.sh
+```
+**Action**: This compiles the driver, installs services, and prepares the system for capture.
+**Result**: A "Golden Master" ready for shutdown and capture.
 
 ## 2. Verify The Build (On Raspberry Pi)
 Before shutting down, verify the build is healthy.
