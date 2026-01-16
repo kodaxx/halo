@@ -48,8 +48,8 @@ if command -v docker &> /dev/null; then
     # Volume mount current dir to /workdir
     docker run --privileged=true --rm \
         -v "$(pwd):/workdir" \
-        drewsif/pishrink \
-        pishrink -s "/workdir/$IMAGE_NAME"
+        cheyne/pishrink \
+        pishrink.sh -s "/workdir/$IMAGE_NAME"
         
     echo "PiShrink Complete."
 else
