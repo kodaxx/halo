@@ -130,6 +130,37 @@ else
     sudo python3 "$SCRIPT_PATH" 4 0 "$COUNTRY" 1 || error_exit "HaLow initialization failed"
 fi
 
+# 3b. Verify wlan1 state and Fallback to Manual Join if wpa_supplicant failed
+log "Verifying wlan1 state..."
+sleep 5
+# Check if wlan1 is UP (RUNNING or carrier)
+if ip link show wlan1 | grep -q "NO-CARRIER"; then
+    log "WARNING: wlan1 is down (wpa_supplicant likely failed). Attempting manual 'iw' fallback..."
+    
+    # Kill the failed supplicant
+    sudo killall wpa_supplicant 2>/dev/null || true
+    
+    # 1. Set Mode to Mesh Point
+    log "Setting wlan1 to mesh point mode..."
+    sudo ip link set wlan1 down
+    sudo iw dev wlan1 set type mesh_point
+    sudo ip link set wlan1 up
+    
+    # 2. Join Mesh
+    log "Joining mesh $MESH_ID on freq $FREQ MHz..."
+    sudo iw dev wlan1 mesh join "$MESH_ID" freq "$FREQ"
+    
+    sleep 2
+    if ip link show wlan1 | grep -q "NO-CARRIER"; then
+         log "ERROR: Manual join also failed. Please check driver logs."
+         # We continue anyway to see if batman can pick it up
+    else
+         log "Manual join successful!"
+    fi
+else
+    log "wlan1 is up and running!"
+fi
+
 # 4. Start Batman-adv
 log "Loading batman-adv module..."
 sudo modprobe batman-adv || true
