@@ -1,6 +1,6 @@
 # Halo Mesh Developer Guide
 
-This guide explains how to build the "Golden Image" for the Halo Mesh Appliance.
+This guide explains how to build the base image for the Halo Mesh Node.
 The workflow consists of three steps: **Build**, **Test**, and **Capture**.
 
 ## Registry
@@ -11,10 +11,11 @@ The workflow consists of three steps: **Build**, **Test**, and **Capture**.
 ---
 
 ## 1. Build The Master (On Raspberry Pi)
-Use a fresh Raspberry Pi (Bookworm or newer) to create the master installation.
+Use a fresh Raspberry Pi Zero 2 W (Bullseye) to create the master installation.
 
-1.  Flash `Raspberry Pi OS Lite (64-bit)` to an SD Card.
-2.  Boot the Pi, connect to internet, and SSH in.
+1.  Flash `Raspberry Pi OS Lite (32-bit)` to an SD Card.
+2.  Run `prepare_pi.sh` to set hostname, wifi, and user.
+3.  Boot the Pi, connect to internet, and SSH in.
 ## 1. Build THE MASTER (2-Step Process)
 
 ### Step 1: Bootstrap (Run on Pi)
@@ -30,7 +31,7 @@ SSH back in and run:
 sudo ~/halo/dev_tools/build_step_two.sh
 ```
 **Action**: This compiles the driver, installs services, and prepares the system for capture.
-**Result**: A "Golden Master" ready for shutdown and capture.
+**Result**: A base image ready for shutdown and capture.
 
 ## 2. Verify The Build (On Raspberry Pi)
 Before shutting down, verify the build is healthy.
