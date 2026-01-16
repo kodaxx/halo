@@ -30,11 +30,53 @@ log "Starting Build Process... (User: $USER_NAME, Repo: $REPO_DIR)"
 
 # 1. Update & Dependencies
 log "Updating Package Lists & Installing Dependencies..."
-# Aggressive update logic from our previous fixes
-if ! apt-get update --allow-releaseinfo-change; then
-    log "APT Update failed. Retrying with aggressive fix..."
-    rm -rf /var/lib/apt/lists/*
-    apt-get update --allow-releaseinfo-change -o Acquire::http::Pipeline-Depth=0 -o Acquire::http::No-Cache=True -o Acquire::BrokenProxy=true || log "Update finished with errors. Proceeding..."
+# Helper: Robust APT Update
+function update_apt() {
+    local MAX_RETRIES=5
+    local COUNT=0
+    
+    while [ $COUNT -lt $MAX_RETRIES ]; do
+        log "Running apt-get update (Attempt $((COUNT+1))/$MAX_RETRIES)..."
+        
+        # 1. Try normal update
+        # --allow-releaseinfo-change handles the "stable -> oldoldstable" suite change
+        if apt-get update --allow-releaseinfo-change; then
+            return 0
+        fi
+        
+        log "APT Update failed (Hash mismatch?). Applying aggressive fixes..."
+        
+        # 2. Aggressive Cleaning
+        rm -rf /var/lib/apt/lists/*
+        rm -rf /var/lib/apt/lists/partial/*
+        apt-get clean
+        
+        # 3. Wait slightly (Mirrors might be syncing)
+        sleep 3
+        
+        # 4. Retry with robustness flags
+        # Pipeline-Depth=0 fixes many HTTP 1.1 proxy issues
+        # No-Cache forces fresh retrieval
+        if apt-get update --allow-releaseinfo-change \
+            -o Acquire::http::Pipeline-Depth=0 \
+            -o Acquire::http::No-Cache=True \
+            -o Acquire::BrokenProxy=true; then
+            return 0
+        fi
+        
+        COUNT=$((COUNT+1))
+        log "Retry failed. Waiting 5s before next attempt..."
+        sleep 5
+    done
+    
+    return 1
+}
+
+if ! update_apt; then
+    log "CRITICAL ERROR: Failed to update package lists after multiple attempts."
+    log "Please check your internet connection or try a different mirror."
+    log "If you are behind a firewall, ensure port 80/443 is open."
+    exit 1
 fi
 
 # Install Dependencies (including those needed for building)
