@@ -82,6 +82,13 @@ fi
 # Install Dependencies (including those needed for building)
 apt-get install -y git device-tree-compiler raspberrypi-kernel-headers build-essential hostapd dnsmasq python3-flask python3-pip iptables bridge-utils batctl dkms
 
+# CRITICAL: Lock Kernel & Headers
+# The compiled driver is tied to this specific kernel version.
+# We prevent future updates from breaking the driver.
+log "Locking Kernel and Headers version..."
+apt-mark hold raspberrypi-kernel raspberrypi-kernel-headers
+
+
 # 2. Compile & Install Device Tree Overlay
 log "Installing Device Tree Overlay..."
 DTS_FILE="nrc7292/dts/newracom_for_5.16_or_later.dts"
