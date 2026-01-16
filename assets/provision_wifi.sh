@@ -26,6 +26,7 @@ if grep -q "Halo_SETUP" "$HOSTAPD_CONF"; then
     echo "SSID: $NEW_SSID" > /boot/wifi_credentials.txt
     echo "PASS: $NEW_PASS" >> /boot/wifi_credentials.txt
     echo "QR_STRING: WIFI:S:$NEW_SSID;T:WPA;P:$NEW_PASS;H:true;;" >> /boot/wifi_credentials.txt
+    echo "ADMIN: http://10.0.0.1" >> /boot/wifi_credentials.txt
 
     echo "Provisioning Complete. SSID: $NEW_SSID"
 fi
