@@ -187,4 +187,39 @@ fi
 echo "=== Setup Complete ==="
 echo "Driver compiled and installed."
 echo "Firmware copied to /lib/firmware/bd.dat."
-echo "To run AP mode: sudo $LOCAL_PKG_DIR/script/start.py 1 0 US"
+
+# 8. Install Systemd Services (But DO NOT Enable)
+echo "Installing Systemd Services (Disabled state)..."
+cp services/*.service /etc/systemd/system/
+
+# Fix paths in services to match REPO_ROOT (determined at start of script)
+# We update the placeholders to the actual permanent path
+sed -i "s|/home/halo/halo|$REPO_ROOT|g" /etc/systemd/system/halo-*.service
+# Also ensure User= is correct (if we aren't 'halo', this might matter, but usually we build as 'halo')
+sed -i "s|User=halo|User=$CURRENT_USER|g" /etc/systemd/system/halo-*.service
+
+systemctl daemon-reload
+# Note: We do NOT enable them. firstboot.sh will do that on the end-user device.
+
+# 9. Install Default Configs
+echo "Installing Default Configurations..."
+if [ ! -f /boot/halo.json ]; then
+    # Prioritize configs/halo.json if exists, else root halo.json
+    if [ -f "$REPO_ROOT/configs/halo.json" ]; then
+        cp "$REPO_ROOT/configs/halo.json" /boot/halo.json
+    elif [ -f "$REPO_ROOT/halo.json" ]; then
+         cp "$REPO_ROOT/halo.json" /boot/halo.json
+    fi
+    # Set permissions so web_admin can read/write
+    chmod 666 /boot/halo.json
+fi
+
+# 10. Permission Fixes for Repo Scripts
+chmod +x "$REPO_ROOT/scripts/"*.sh
+chmod +x "$REPO_ROOT/dashboard/web_admin.py"
+chmod +x "$REPO_ROOT/firstboot.sh"
+
+echo "=== BUILD COMPLETE ==="
+echo "This system is now a 'Golden Master'."
+echo "1. Shutdown using: 'sudo shutdown now'"
+echo "2. Capture SD Card on Mac using 'dev_tools/capture_image.sh'"
