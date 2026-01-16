@@ -135,6 +135,11 @@ sed -i '/def /! s/startNAT()/#startNAT()/g' "$START_PY"
 # Switch to wlan1
 sed -i "s/run_ap('wlan0')/run_ap('wlan1')/g" "$START_PY"
 sed -i "s/run_sta('wlan0')/run_sta('wlan1')/g" "$START_PY"
+# Fix Mesh calls also defaulting to wlan0
+sed -i "s/run_mpp('wlan0'/run_mpp('wlan1'/g" "$START_PY"
+sed -i "s/run_mp('wlan0'/run_mp('wlan1'/g" "$START_PY"
+sed -i "s/run_map('wlan0'/run_map('wlan1'/g" "$START_PY"
+
 # Update: Manually set IP for wlan1 since we disabled dhcpcd service restart
 sed -i 's/subprocess.call(\["sudo", "ifconfig", "wlan0", "up"\])/subprocess.call(["sudo", "ifconfig", "wlan1", "192.168.200.1", "up"])/g' "$START_PY"
 
