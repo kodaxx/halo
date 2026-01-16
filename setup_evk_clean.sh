@@ -141,9 +141,12 @@ sed -i "s/run_mp('wlan0'/run_mp('wlan1'/g" "$START_PY"
 sed -i "s/run_map('wlan0'/run_map('wlan1'/g" "$START_PY"
 
 # CRITICAL FIX: Patch mesh.py (imported by start.py) which ALSO kills wpa_supplicant
+# AND deletes our bridge (br0)
 MESH_PY="$LOCAL_PKG_DIR/script/mesh.py"
 echo "Patching mesh.py..."
 sed -i '/killall.*wpa_supplicant/s/^/#/' "$MESH_PY"
+# Prevent destroying br0
+sed -i '/removeBridgeMeshAP/s/^/#/' "$MESH_PY"
 # Also prevent it from messing with bat0/wlan0 blindly if we are using manual setup
 sed -i '/batctl if del wlan0/s/^/#/' "$MESH_PY"
 
