@@ -126,8 +126,38 @@ HTML_TEMPLATE = """
     <label>Mesh ID (Network Password)</label>
     <input type="text" name="mesh_id" value="{{ conf.mesh_id }}" required>
     
-    <label>Frequency (MHz)</label>
-    <input type="number" name="freq" value="{{ conf.freq }}" min="902" max="928" required>
+    <label>Frequency / Channel</label>
+    <select name="freq" id="freq_select" onchange="checkCustom()" required>
+        <option value="5780" {% if conf.freq|string == '5780' %}selected{% endif %}>915 MHz (Channel 156)</option>
+        <option value="5795" {% if conf.freq|string == '5795' %}selected{% endif %}>921 MHz (Channel 159)</option>
+        <option value="custom" {% if conf.freq|string not in ['5780', '5795'] %}selected{% endif %}>Custom / Manual</option>
+    </select>
+    
+    <div id="custom_freq_div" style="display: {% if conf.freq|string not in ['5780', '5795'] %}block{% else %}none{% endif %}; margin-top: 10px;">
+        <label>Custom Frequency (Driver Alias Value)</label>
+        <input type="number" name="custom_freq" value="{{ conf.freq }}" placeholder="5795">
+        <span class="info">Required: Driver aliased frequency (e.g. 5795 = 921 MHz)</span>
+    </div>
+
+    <script>
+        function checkCustom() {
+            var val = document.getElementById("freq_select").value;
+            var div = document.getElementById("custom_freq_div");
+            var input = document.querySelector('input[name="custom_freq"]');
+            
+            if (val === "custom") {
+                div.style.display = "block";
+                // If switching to custom, keep current value if it's not one of the presets
+                // Otherwise clear it
+                if (input.value === "5780" || input.value === "5795") {
+                    input.value = ""; 
+                }
+            } else {
+                div.style.display = "none";
+                input.value = val;
+            }
+        }
+    </script>
     
     <label>Country Code</label>
     <input type="text" name="country" value="{{ conf.country }}" maxlength="2" pattern="[A-Z]{2}" required>
@@ -158,6 +188,18 @@ HTML_TEMPLATE = """
 </html>
 """
 
+
+# Valid Frequency Options (S1G -> 5GHz Alias)
+# Driver Formula: 5000 + (5 * Channel_Index)
+FREQ_MAP = {
+    # US S1G Channels (2MHz Bandwidth)
+    'US': [
+        {'label': '915 MHz (Ch 156)', 'value': 5780},  # 156 * 5 + 5000 = 5780
+        {'label': '921 MHz (Ch 159)', 'value': 5795},  # 159 * 5 + 5000 = 5795
+        {'label': 'Custom (Expert)', 'value': 'custom'}
+    ]
+}
+
 def validate_config(config):
     """Validate configuration before saving"""
     errors = []
@@ -168,18 +210,19 @@ def validate_config(config):
     elif len(config['mesh_id']) > 32:
         errors.append("mesh_id must be 32 characters or less")
     
-    # Validate frequency
+    # Validate frequency (Must support Aliased 5GHz values)
     try:
         freq = int(config.get('freq', 0))
-        if not (902 <= freq <= 928):
-            errors.append("Frequency must be between 902 and 928 MHz")
+        # Allow S1G range (902-928) OR Driver Alias range (5000-6000)
+        if not ((902 <= freq <= 928) or (5000 <= freq <= 6000)):
+            errors.append("Frequency must be valid S1G (900s) or Aliased 5GHz (5000s)")
     except (ValueError, TypeError):
         errors.append("Frequency must be a valid number")
     
     # Validate country code
     country = config.get('country', '').upper()
     if not country or len(country) != 2:
-        errors.append("Country code must be exactly 2 characters (ISO 3166-1 alpha-2)")
+        errors.append("Country code must be exactly 2 characters")
     elif not country.isalpha():
         errors.append("Country code must contain only letters")
     else:
@@ -204,7 +247,6 @@ def validate_config(config):
                     num = int(part)
                     if not (0 <= num <= 255):
                         errors.append("Each octet in IP address must be 0-255")
-                        break
             except ValueError:
                 errors.append("Static IP must contain only numeric octets")
     
@@ -227,7 +269,7 @@ def index():
         # Get form data
         new_config = {
             'mesh_id': request.form.get('mesh_id', conf.get('mesh_id', '')),
-            'freq': request.form.get('freq', conf.get('freq', '')),
+            'freq': request.form.get('custom_freq') if request.form.get('freq') == 'custom' or request.form.get('custom_freq') else request.form.get('freq', conf.get('freq', '')),
             'country': request.form.get('country', conf.get('country', 'US')),
             'gateway': request.form.get('gateway', conf.get('gateway', 'auto')),
             'ip_mode': request.form.get('ip_mode', conf.get('ip_mode', 'smart')),
