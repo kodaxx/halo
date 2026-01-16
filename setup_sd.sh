@@ -47,7 +47,6 @@ update_config=1
 network={
     ssid="$WIFI_SSID"
     psk="$WIFI_PASS"
-    key_mgmt=WPA-PSK
 }
 EOF
 
