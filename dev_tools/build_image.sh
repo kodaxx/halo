@@ -79,14 +79,19 @@ if ! update_apt; then
     exit 1
 fi
 
-# Install Dependencies (including those needed for building)
-apt-get install -y git device-tree-compiler raspberrypi-kernel-headers build-essential hostapd dnsmasq python3-flask python3-pip iptables bridge-utils batctl dkms
-
 # CRITICAL: Lock Kernel & Headers
 # The compiled driver is tied to this specific kernel version.
 # We prevent future updates from breaking the driver.
-log "Locking Kernel and Headers version..."
-apt-mark hold raspberrypi-kernel raspberrypi-kernel-headers
+log "Locking Kernel version to prevent unwanted upgrades..."
+apt-mark hold raspberrypi-kernel
+
+# Install Dependencies (including those needed for building)
+# Note: If apt fails here, it means matching headers for your locked kernel are missing.
+apt-get install -y git device-tree-compiler raspberrypi-kernel-headers build-essential hostapd dnsmasq python3-flask python3-pip iptables bridge-utils batctl dkms
+
+log "Locking Headers version..."
+apt-mark hold raspberrypi-kernel-headers
+
 
 
 # 2. Compile & Install Device Tree Overlay
