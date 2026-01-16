@@ -102,6 +102,14 @@ fi
 # Pre-configure the wpa_supplicant conf file with SSID and Freq
 # Target: mp_halow_open.conf (assuming Open security for internal mesh)
 TARGET_CONF="$CONF_DIR/$COUNTRY/mp_halow_open.conf"
+# 3. Initialize HaLow Radio
+if [ ! -f "$SCRIPT_PATH" ]; then
+    error_exit "NRC startup script not found: $SCRIPT_PATH"
+fi
+
+# Pre-configure the wpa_supplicant conf file with SSID and Freq
+# Target: mp_halow_open.conf (assuming Open security for internal mesh)
+TARGET_CONF="$CONF_DIR/$COUNTRY/mp_halow_open.conf"
 if [ -f "$TARGET_CONF" ]; then
     log "Patching config: $TARGET_CONF"
     sudo sed -i "s/ssid=\".*\"/ssid=\"$MESH_ID\"/g" "$TARGET_CONF"
@@ -123,28 +131,23 @@ else
     log "WARNING: Config file not found at $TARGET_CONF"
 fi
 
-# Ensure previous instances are killed - BE GENTLE
-if lsmod | grep -q "nrc"; then
-    log "Driver already loaded."
-else
-    log "Initializing HaLow radio..."
-    cd "$DRIVER_DIR/script"
-    # Args: Type(4=Mesh), Security(0=Open), Country(US), MeshMode(1=MeshPoint)
-    # Note: Freq and ID are now in the .conf file
-    sudo python3 "$SCRIPT_PATH" 4 0 "$COUNTRY" 1 || error_exit "HaLow initialization failed"
-fi
+# ALWAYS run start.py to ensure a clean state (it handles rmmod/killall itself)
+log "Initializing HaLow radio..."
+cd "$DRIVER_DIR/script"
+
+# Args: Type(4=Mesh), Security(0=Open), Country(US), MeshMode(1=MeshPoint)
+# Note: Freq and ID are now in the .conf file
+sudo python3 "$SCRIPT_PATH" 4 0 "$COUNTRY" 1 || error_exit "HaLow initialization failed"
 
 # 3b. Verify wlan1 state and Fallback to Manual Join if wpa_supplicant failed
 log "Verifying wlan1 state..."
 sleep 5
-# Check if wlan1 is UP (RUNNING or carrier)
-if ip link show wlan1 | grep -q "NO-CARRIER"; then
-    log "WARNING: wlan1 is down (wpa_supplicant likely failed). Attempting manual 'iw' fallback..."
+# Check if wlan1 is UP (RUNNING)
+# If it is DOWN or NO-CARRIER, we assume failure
+if ! ip link show wlan1 | grep -q "state UP"; then
+    log "WARNING: wlan1 is DOWN (wpa_supplicant likely failed). Attempting manual 'iw' fallback..."
     
     # DO NOT killall wpa_supplicant, it kills wlan0 (SSH) too!
-    # Only kill specific instance if it exists?
-    # sudo pkill -f "wpa_supplicant.*wlan1" || true  <-- Even this is risky if the pattern matches generic.
-    # Better to just proceed. The driver will error if busy, which is better than losing SSH.
     
     # 1. Set Mode (Try 'mesh', then 'mp', then 'ibss')
     log "Setting wlan1 to mesh mode..."
@@ -171,8 +174,8 @@ if ip link show wlan1 | grep -q "NO-CARRIER"; then
     fi
     
     sleep 2
-    if ip link show wlan1 | grep -q "NO-CARRIER"; then
-         log "ERROR: Manual join also failed. Please check driver logs."
+    if ! ip link show wlan1 | grep -q "state UP"; then
+         log "ERROR: Manual join also failed. Interface still DOWN."
          # We continue anyway to see if batman can pick it up
     else
          log "Manual join successful!"
