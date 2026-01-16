@@ -23,10 +23,14 @@ error_exit() {
 
 # 0. CRITICAL PRE-CHECK: Protect networking from dhcpcd
 log "Checking dhcpcd configuration..."
-if ! grep -q "denyinterfaces br0" /etc/dhcpcd.conf; then
-    log "WARNING: br0 is not protected from dhcpcd!"
-    log "Adding 'denyinterfaces br0 bat0' to /etc/dhcpcd.conf..."
-    echo "denyinterfaces br0 bat0" | sudo tee -a /etc/dhcpcd.conf >/dev/null
+# We need to ensure dhcpcd does NOT try to manage wlan1, br0 or bat0.
+# managing wlan1 manually means dhcpcd will fight us if we don't deny it.
+if ! grep -q "denyinterfaces.*wlan1" /etc/dhcpcd.conf; then
+    log "WARNING: wlan1/br0/bat0 must be unmanaged by dhcpcd!"
+    log "Updating /etc/dhcpcd.conf..."
+    # Remove old deny lines to avoid duplicates
+    sudo sed -i '/denyinterfaces/d' /etc/dhcpcd.conf
+    echo "denyinterfaces wlan1 br0 bat0" | sudo tee -a /etc/dhcpcd.conf >/dev/null
     log "--------------------------------------------------------"
     log "Configuration updated. You MUST restart networking to apply."
     log "Please run this command (your connection will drop briefly):"
@@ -137,8 +141,10 @@ sleep 5
 if ip link show wlan1 | grep -q "NO-CARRIER"; then
     log "WARNING: wlan1 is down (wpa_supplicant likely failed). Attempting manual 'iw' fallback..."
     
-    # Kill the failed supplicant
-    sudo killall wpa_supplicant 2>/dev/null || true
+    # DO NOT killall wpa_supplicant, it kills wlan0 (SSH) too!
+    # Only kill specific instance if it exists?
+    # sudo pkill -f "wpa_supplicant.*wlan1" || true  <-- Even this is risky if the pattern matches generic.
+    # Better to just proceed. The driver will error if busy, which is better than losing SSH.
     
     # 1. Set Mode to Mesh Point
     log "Setting wlan1 to mesh point mode..."
