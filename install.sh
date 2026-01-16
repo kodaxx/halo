@@ -1,116 +1,155 @@
 #!/bin/bash
-# Halo Cloud Installer
-# USAGE: bash <(curl -sL https://raw.githubusercontent.com/kodaxx/Halo/main/install.sh)
-# Requires: Linux 6.12+, Raspberry Pi OS (Bookworm)
+# install.sh
+# One-Click Installer for Halo HaLow Mesh
+# auto-reboots and continues installation.
 
-REPO_URL="https://github.com/kodaxx/Halo.git" # REPLACE THIS
-INSTALL_DIR="/tmp/halo_install"
+set -e
+LOG_FILE="/var/log/halo-install.log"
 
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+    echo "[Halo Installer] $(date '+%Y-%m-%d %H:%M:%S') - $1" | sudo tee -a "$LOG_FILE"
+    echo "$1"
 }
 
-error_exit() {
-    log "ERROR: $*" >&2
+# Ensure we are running from the repo directory
+cd "$(dirname "$0")"
+REPO_DIR=$(pwd)
+USER_HOME=$(eval echo ~${SUDO_USER:-$USER})
+USER_NAME="${SUDO_USER:-$USER}"
+
+if [ "$EUID" -ne 0 ]; then
+    log "Please run as root (sudo ./install.sh)"
     exit 1
-}
-
-log "=== Halo Installer (Linux 6.12+) ==="
-
-# 1. Update package lists
-log "Updating package lists..."
-sudo apt-get update || error_exit "apt-get update failed"
-
-# 2. Install dependencies
-log "Installing dependencies..."
-PACKAGES="raspberrypi-kernel-headers git python3-flask batctl dnsmasq hostapd build-essential bc wget iproute2 iptables-nft"
-
-sudo apt-get install -y $PACKAGES || error_exit "apt-get install failed"
-
-# 3. Clone repository
-log "Cloning Halo repository..."
-rm -rf $INSTALL_DIR
-git clone $REPO_URL $INSTALL_DIR || error_exit "git clone failed"
-
-# 4. Setup nrc7292 driver
-log "Setting up NRC7292 HaLow driver..."
-cd /home/pi
-if [ ! -d "nrc7292_sw_pkg" ]; then
-    log "Copying nrc7292_sw_pkg from installation..."
-    cp -r $INSTALL_DIR/nrc7292_sw_pkg . || error_exit "Failed to copy nrc7292_sw_pkg"
-else
-    log "nrc7292_sw_pkg already exists, skipping copy"
 fi
 
-# 5. Update /etc/modules for USB Ethernet Gadget
-log "Configuring kernel modules..."
-grep -qxF "dwc2" /etc/modules || echo "dwc2" | sudo tee -a /etc/modules
-grep -qxF "g_ether" /etc/modules || echo "g_ether" | sudo tee -a /etc/modules
+log "Starting Installation... (User: $USER_NAME, Home: $USER_HOME)"
 
-# 6. Configure boot settings
-log "Configuring boot settings..."
-if [ -f "$INSTALL_DIR/assets/config.txt" ]; then
-    cat $INSTALL_DIR/assets/config.txt | sudo tee -a /boot/config.txt || log "WARNING: Failed to append to /boot/config.txt"
-else
-    log "WARNING: config.txt not found in assets"
-fi
-
-# 7. Copy configuration files
-log "Installing configuration files..."
-sudo cp $INSTALL_DIR/assets/hostapd.conf /etc/hostapd/hostapd.conf || error_exit "Failed to copy hostapd.conf"
-sudo cp $INSTALL_DIR/assets/dnsmasq.conf /etc/dnsmasq.conf || error_exit "Failed to copy dnsmasq.conf"
-sudo cp $INSTALL_DIR/assets/dhcpcd.conf /etc/dhcpcd.conf || error_exit "Failed to copy dhcpcd.conf"
-sudo cp $INSTALL_DIR/assets/halo.json /boot/halo.json || error_exit "Failed to copy halo.json"
-
-# 8. Install scripts and systemd units
-log "Installing scripts..."
-if [ "$MODERN" -eq 1 ]; then
-    log "Using modernized scripts (Linux 6.12+ optimized)"
-    SCRIPT_SUFFIX=".modern"
-else
-    log "Using legacy scripts"
-    SCRIPT_SUFFIX=""
-fi
-
-# Copy scripts (prefer modern versions if available)
-for script in start_mesh.sh gateway_monitor.sh provision_wifi.sh; do
-    if [ -f "$INSTALL_DIR/assets/${script}${SCRIPT_SUFFIX}" ]; then
-        sudo cp "$IN
-log "Installing scripts..."
-for script in start_mesh.sh gateway_monitor.sh provision_wifi.sh web_admin.py; do
-    sudo cp "$INSTALL_DIR/assets/$script" "/home/pi/$script" || error_exit "Failed to copy $script"
-    sudo chmod +x "/home/pi/$script"
-    log "Installed $script"  log "Installed $unit (legacy)"
+# --- PHASE 1: OVERLAY CHECK ---
+# Check if overlay is loaded in config.txt
+if ! grep -q "dtoverlay=nrc-rpi" /boot/config.txt; then
+    log "Phase 1: Installing Device Tree Overlay..."
+    
+    # 1. Update & Dependencies
+    apt-get update
+    apt-get install -y git device-tree-compiler raspberrypi-kernel-headers build-essential hostapd python3-flask python3-pip iptables bridge-utils batctl
+    
+    # 2. Compile & Install Overlay
+    DTS_FILE="nrc7292_sw_pkg/dts/newracom_for_5.16_or_later.dts"
+    if [ ! -f "$DTS_FILE" ]; then
+        log "Error: DTS file not found at $DTS_FILE"
+        exit 1
     fi
-done
+    dtc -I dts -O dtb -o nrc-rpi.dtbo "$DTS_FILE"
+    cp nrc-rpi.dtbo /boot/overlays/
+    
+    # 3. Enable in config.txt
+    echo "dtoverlay=nrc-rpi" >> /boot/config.txt
+    
+    # 4. Setup Bootstrap Service for Post-Reboot
+    log "Setting up bootstrap service for post-reboot continuation..."
+    cat > /etc/systemd/system/halo-bootstrap.service <<EOF
+[Unit]
+Description=Halo Installer Bootstrap
+After=network.target
 
-# Always install web_admin.service (if it exists)
-if [ -f "$INSTALL_DIR/assets/web_admin.service" ]; then
-    sudo cp "$INSTALL_DIR/assets/web_admin.service" "/etc/systemd/system/web_admin.service" || log "WARNING: Failed to copy web_admin.service"
+[Service]
+Type=oneshot
+ExecStart=$REPO_DIR/install.sh
+WorkingDirectory=$REPO_DIR
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl enable halo-bootstrap.service
+    
+    log "Phase 1 Complete. Rebooting in 5 seconds..."
+    sleep 5
+    reboot
+    exit 0
 fi
 
-# 10. Reload systemd and enable services
-log "Configuring systemd services..."
-sudo systemctl daemon-reload
-sudo systemctl unmask hostapd
-sudo systemctl enable hostapd
-sudo systemctl enable dnsmasq
-sudo systemctl enable halo.service
-sudo systemctl enable halo-firstboot
-sudo systemctl enable web_admin.service 2>/dev/null || log "web_admin.service not available"
+# --- PHASE 2: DRIVER & APPLIANCE SETUP ---
+log "Phase 2: Overlay detected. Proceeding with Driver & Software Setup..."
 
-# 11. Run initial provisioning
-for unit in halo.service halo-firstboot.service; do
-    sudo cp "$INSTALL_DIR/assets/$unit" "/etc/systemd/system/$unit" || error_exit "Failed to copy $unit"
-    log "Installed $unit"t /boot/wifi_credentials.txt
+# 1. Setup Local EVK Directory
+LOCAL_PKG_DIR="$USER_HOME/nrc_pkg"
+if [ ! -d "$LOCAL_PKG_DIR" ]; then
+    log "Creating local package directory at $LOCAL_PKG_DIR..."
+    cp -r "nrc7292_sw_pkg/package/evk/sw_pkg/nrc_pkg" "$LOCAL_PKG_DIR"
+    chown -R "$USER_NAME:$USER_NAME" "$LOCAL_PKG_DIR"
+fi
+
+# 2. Compile Driver (Idempotent check)
+if [ ! -f "$LOCAL_PKG_DIR/sw/driver/nrc.ko" ]; then
+    log "Compiling Driver..."
+    cd "nrc7292_sw_pkg/package/src/nrc"
+    make clean
+    if make; then
+        mkdir -p "$LOCAL_PKG_DIR/sw/driver"
+        cp nrc.ko "$LOCAL_PKG_DIR/sw/driver/"
+        mkdir -p "$LOCAL_PKG_DIR/evk/binary"
+        cp nrc.ko "$LOCAL_PKG_DIR/evk/binary/"
+        log "Driver compiled successfully."
+    else
+        log "Error: Driver compilation failed."
+        exit 1
+    fi
+    cd "$REPO_DIR"
 else
-    echo "ERROR: Credentials not generated."
+    log "Driver already compiled."
 fi
-echo "================================"
-echo ""
-echo "Next steps:"
-echo "  1. Review /boot/halo.json for configuration"
-echo "  2. Reboot the device: sudo reboot"
-echo "  3. After reboot, driver will compile (first boot only)"
-echo "  4. Access web admin at: http://gw.halo.local or http://10.0.0.1"
-echo ""
+
+# 3. Install Firmware
+mkdir -p /lib/firmware
+cp "nrc7292_sw_pkg/package/evk/binary/nrc7292_cspi.bin" /lib/firmware/
+cp "nrc7292_sw_pkg/package/evk/binary/nrc7292_bd.dat" /lib/firmware/bd.dat
+log "Firmware installed."
+
+# 4. Patch Scripts (start.py, mesh.py) - calling existing logic or rewriting inline? 
+# Rewriting minimal necessary logic to ensure robustness
+log "Patching Scripts..."
+
+# Fix Permissions
+find "$LOCAL_PKG_DIR" -name "*.py" -exec chmod +x {} \;
+find "$LOCAL_PKG_DIR" -name "*.sh" -exec chmod +x {} \;
+chown -R "$USER_NAME:$USER_NAME" "$LOCAL_PKG_DIR" # Ensure user owns it all
+
+# Patch start.py to not kill wlan0
+START_PY="$LOCAL_PKG_DIR/script/start.py"
+sed -i '/wpa_cli disable wlan0/s/^/#/' "$START_PY"
+sed -i '/killall.*wpa_supplicant/s/^/#/' "$START_PY"
+sed -i "s|/home/pi/|$USER_HOME/|g" "$START_PY"
+# Use wlan1
+sed -i "s/run_mp('wlan0'/run_mp('wlan1'/g" "$START_PY"
+
+# 5. Install Services
+log "Installing Systemd Services..."
+cp services/*.service /etc/systemd/system/
+# Fix paths in services to match $USER_HOME if needed (assuming /home/halo for now based on previous work, but lets be safe)
+sed -i "s|/home/halo|$USER_HOME|g" /etc/systemd/system/halo-*.service
+
+systemctl daemon-reload
+systemctl enable halo-web.service
+systemctl enable halo-mesh.service
+systemctl enable halo-monitor.service
+
+# 6. Install Default Config
+if [ ! -f /boot/halo.json ]; then
+    cp halo.json /boot/halo.json
+    log "Default config installed to /boot/halo.json"
+fi
+
+# 7. Cleanup Bootstrap
+log "Disabling bootstrap service..."
+systemctl disable halo-bootstrap.service
+rm /etc/systemd/system/halo-bootstrap.service
+systemctl daemon-reload
+
+log "=== Installation Complete! ==="
+log "Starting services..."
+systemctl start halo-web.service
+systemctl start halo-mesh.service
+systemctl start halo-monitor.service
+
+log "Done. Web Admin should be accessible."
