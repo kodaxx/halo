@@ -85,7 +85,9 @@ log "Configuration: MESH_ID=$MESH_ID, FREQ=$FREQ, COUNTRY=$COUNTRY"
 log "Setting up br0 bridge..."
 create_bridge "br0"
 # CRITICAL: Bridge wlan0 (AP) so connected phones can access the mesh
-bridge_add_if "br0" "wlan0"
+# UPDATE: hostapd.conf has 'bridge=br0', so hostapd handles this automatically.
+# Manual enslavement here fails because wlan0 is not yet in AP mode.
+# bridge_add_if "br0" "wlan0"
 
 # 3. Initialize HaLow Radio
 if [ ! -f "$SCRIPT_PATH" ]; then
