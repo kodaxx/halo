@@ -6,7 +6,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/home/halo/halo
-ExecStart=/usr/bin/python3 /home/halo/halo/web_admin.py
+ExecStart=/usr/bin/python3 /home/halo/halo/dashboard/web_admin.py
 Restart=always
 RestartSec=5
 

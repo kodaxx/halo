@@ -41,7 +41,7 @@ Turn your Raspberry Pi into a secure, long-range HaLow Mesh node in minutes.
 2.  Run the Finalizer:
     ```bash
     cd halo
-    sudo ./finalize_appliance.sh
+    sudo ./firstboot.sh
     ```
 3.  **Done!**
     *   The script will generate unique WiFi credentials for this device.
