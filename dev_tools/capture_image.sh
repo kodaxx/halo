@@ -43,13 +43,14 @@ if command -v docker &> /dev/null; then
     echo "Docker detected. Running PiShrink..."
     echo "Shrinking image and enabling auto-expand..."
     
-    # Run PiShrink via Docker
-    # Note: This is known to be flaky on macOS Docker due to loopback/permission issues.
-    # We allow it to fail so we can at least gzip the result.
+    # Run PiShrink via Docker with macOS Workaround
+    # Workaround: Docker on Mac cannot loopback-mount files directly from the bind-mounted host FS.
+    # Fix: We copy the image INTO the container, shrink it there, and copy it back.
     if docker run --privileged=true --rm \
+        --entrypoint "/bin/sh" \
         -v "$(pwd):/workdir" \
         cheyne/pishrink \
-        pishrink -s "/workdir/$IMAGE_NAME"; then
+        -c "cp /workdir/$IMAGE_NAME /tmp/working.img && pishrink -s /tmp/working.img && mv /tmp/working.img /workdir/$IMAGE_NAME"; then
         echo "PiShrink Complete."
     else
         echo "WARNING: PiShrink failed (Common on macOS Docker)."
