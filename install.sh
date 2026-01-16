@@ -24,10 +24,60 @@ fi
 
 log "Starting Installation... (User: $USER_NAME, Home: $USER_HOME)"
 
+# Helper: Setup Access Point & Provisioning
+setup_ap() {
+    log "Configuring Access Point & Provisioning Credentials..."
+    
+    # 1. Hostapd Config
+    if [ -f "assets/hostapd.conf" ]; then
+        cp assets/hostapd.conf /etc/hostapd/hostapd.conf
+        sed -i 's|#DAEMON_CONF=""|DAEMON_CONF="/etc/hostapd/hostapd.conf"|g' /etc/default/hostapd
+        systemctl unmask hostapd
+        systemctl enable hostapd
+    fi
+
+    # 2. Dnsmasq Config
+    if [ -f "assets/dnsmasq.conf" ]; then
+        cp assets/dnsmasq.conf /etc/dnsmasq.d/halo-ap.conf
+    fi
+
+    # 3. run Provisioning
+    if [ -f "assets/provision_wifi.sh" ]; then
+        DEST_PROV="$USER_HOME/halo/provision_wifi.sh"
+        cp assets/provision_wifi.sh "$DEST_PROV"
+        chmod +x "$DEST_PROV"
+        sed -i "s|/home/halo|$USER_HOME|g" /etc/systemd/system/halo-provision.service
+        systemctl enable halo-provision.service
+        
+        # Run NOW to generate credentials
+        bash "$DEST_PROV"
+        
+        # DISPLAY CREDENTIALS
+        if [ -f /boot/wifi_credentials.txt ]; then
+            echo ""
+            echo "========================================================"
+            echo "   HALO APPLIANCE CREDENTIALS (SAVE THESE!)"
+            echo "========================================================"
+            cat /boot/wifi_credentials.txt
+            echo "========================================================"
+            echo ""
+            echo "NOTE: The system will REBOOT to install the kernel overlay."
+            echo "      Installation will continue in the background."
+            echo "      Please wait ~5 minutes for the WiFi network to appear."
+            echo ""
+        fi
+    fi
+}
+
 # --- PHASE 1: OVERLAY CHECK ---
 # Check if overlay is loaded in config.txt
 if ! grep -q "dtoverlay=nrc-rpi" /boot/config.txt; then
     log "Phase 1: Installing Device Tree Overlay..."
+    
+    # 0. Fix Hostname Resolution (Silence sudo warnings)
+    if ! grep -q "127.0.1.1" /etc/hosts; then
+        echo "127.0.1.1 $(hostname)" >> /etc/hosts
+    fi
     
     # 1. Update & Dependencies
     apt-get update
@@ -45,7 +95,10 @@ if ! grep -q "dtoverlay=nrc-rpi" /boot/config.txt; then
     # 3. Enable in config.txt
     echo "dtoverlay=nrc-rpi" >> /boot/config.txt
     
-    # 4. Setup Bootstrap Service for Post-Reboot
+    # 4. PRE-PROVISION WIFI (So user sees creds before reboot)
+    setup_ap
+    
+    # 5. Setup Bootstrap Service for Post-Reboot
     log "Setting up bootstrap service for post-reboot continuation..."
     cat > /etc/systemd/system/halo-bootstrap.service <<EOF
 [Unit]
@@ -63,14 +116,21 @@ WantedBy=multi-user.target
 EOF
     systemctl enable halo-bootstrap.service
     
-    log "Phase 1 Complete. Rebooting in 5 seconds..."
-    sleep 5
+    log "Phase 1 Complete. Rebooting in 30 seconds to apply overlay..."
+    log "Please SAVE YOUR CREDENTIALS above."
+    sleep 30
     reboot
     exit 0
 fi
 
 # --- PHASE 2: DRIVER & APPLIANCE SETUP ---
 log "Phase 2: Overlay detected. Proceeding with Driver & Software Setup..."
+# 0. Fix Hostname Resolution (Again, just in case)
+if ! grep -q "127.0.1.1" /etc/hosts; then
+    echo "127.0.1.1 $(hostname)" >> /etc/hosts
+fi
+
+# ... (Rest of Phase 2 Logic) ...
 
 # 1. Setup Local EVK Directory
 LOCAL_PKG_DIR="$USER_HOME/nrc_pkg"
@@ -165,45 +225,8 @@ if [ -f "assets/config.txt" ]; then
     cp assets/config.txt /boot/config.txt
 fi
 
-# 6b. Setup AP Mode (wlan0)
-log "Configuring Access Point (wlan0)..."
-if [ -f "assets/hostapd.conf" ]; then
-    cp assets/hostapd.conf /etc/hostapd/hostapd.conf
-    # Point default to config
-    sed -i 's|#DAEMON_CONF=""|DAEMON_CONF="/etc/hostapd/hostapd.conf"|g' /etc/default/hostapd
-    systemctl unmask hostapd
-    systemctl enable hostapd
-fi
-
-if [ -f "assets/dnsmasq.conf" ]; then
-    cp assets/dnsmasq.conf /etc/dnsmasq.d/halo-ap.conf
-    # Note: We rely on gateway_monitor.sh for dnsmasq, but this file is good backup
-fi
-
-# 6c. Setup Provisioning Script (AND RUN IT NOW)
-if [ -f "assets/provision_wifi.sh" ]; then
-    DEST_PROV="$USER_HOME/halo/provision_wifi.sh"
-    cp assets/provision_wifi.sh "$DEST_PROV"
-    chmod +x "$DEST_PROV"
-    # Ensure service file uses correct path
-    sed -i "s|/home/halo|$USER_HOME|g" /etc/systemd/system/halo-provision.service
-    systemctl enable halo-provision.service
-    
-    # Run NOW to generate credentials before reboot
-    log "Generating Wi-Fi Credentials..."
-    bash "$DEST_PROV"
-    
-    # DISPLAY CREDENTIALS
-    if [ -f /boot/wifi_credentials.txt ]; then
-        echo ""
-        echo "========================================================"
-        echo "   HALO APPLIANCE SETUP COMPLETE - SAVE THESE NOW!"
-        echo "========================================================"
-        cat /boot/wifi_credentials.txt
-        echo "========================================================"
-        echo ""
-    fi
-fi
+# 6b. Setup AP Mode (Run again to ensure config consistency)
+setup_ap
 
 # 7. Cleanup & Final Security
 log "Disabling bootstrap service..."
