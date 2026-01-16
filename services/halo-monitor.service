@@ -7,7 +7,7 @@ Requires=halo-mesh.service
 Type=simple
 User=root
 WorkingDirectory=/home/halo/halo
-ExecStart=/home/halo/halo/gateway_monitor.sh
+ExecStart=/home/halo/halo/scripts/gateway_monitor.sh
 Restart=always
 RestartSec=10
 

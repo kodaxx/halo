@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=/home/halo/halo/provision_wifi.sh
+ExecStart=/home/halo/halo/scripts/provision_wifi.sh
 RemainAfterExit=yes
 
 [Install]
