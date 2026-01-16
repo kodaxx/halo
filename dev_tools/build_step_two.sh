@@ -29,12 +29,11 @@ echo "===  Setting up Clean EVK Environment in $LOCAL_PKG_DIR for user $CURRENT_
 
 # Install Runtime Dependencies
 echo "Installing Runtime Dependencies..."
-sudo apt-get install -y hostapd dnsmasq iptables bridge-utils batctl dkms
+sudo apt-get install -y hostapd dnsmasq iptables bridge-utils batctl dkms python3-flask
 
 # Unmask hostapd (it is often masked by default on RPi)
 sudo systemctl unmask hostapd
 sudo systemctl disable hostapd # We run it manually via script
-
 
 # 1. Copy Generic EVK Package
 if [ -d "$LOCAL_PKG_DIR" ]; then
@@ -189,8 +188,8 @@ fi
 echo "Driver compiled and installed."
 echo "Firmware copied to /lib/firmware/bd.dat."
 
-# 8. Install Systemd Services (But DO NOT Enable)
-echo "Installing Systemd Services (Disabled state)..."
+# 8. Install Systemd Services
+echo "Installing Systemd Services..."
 cp services/*.service /etc/systemd/system/
 
 # Fix paths in services to match REPO_ROOT (determined at start of script)
@@ -200,7 +199,17 @@ sed -i "s|/home/halo/halo|$REPO_ROOT|g" /etc/systemd/system/halo-*.service
 sed -i "s|User=halo|User=$CURRENT_USER|g" /etc/systemd/system/halo-*.service
 
 systemctl daemon-reload
-# Note: We do NOT enable them. firstboot.sh will do that on the end-user device.
+
+# 8b. Start Active Services (Mesh, Web, Monitor) for Verification
+echo "Enabling and Starting Core Services..."
+systemctl enable --now halo-mesh.service
+systemctl enable --now halo-web.service
+systemctl enable --now halo-monitor.service
+
+# 8c. Stage Provision Service (Do NOT start - Firstboot/User will run this)
+echo "Staging Provision Service (Disabled)..."
+systemctl disable halo-provision.service
+# Note: firstboot.sh or the user will trigger provisioning logic.
 
 # 9. Install Default Configs
 echo "Installing Default Configurations..."
