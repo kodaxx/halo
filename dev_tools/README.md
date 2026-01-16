@@ -15,17 +15,19 @@ Use a fresh Raspberry Pi (Bookworm or newer) to create the master installation.
 
 1.  Flash `Raspberry Pi OS Lite (64-bit)` to an SD Card.
 2.  Boot the Pi, connect to internet, and SSH in.
-3.  Clone this repository:
+3.  **Run the One-Line Builder:**
     ```bash
-    git clone https://github.com/kodaxx/halo.git
-    cd halo
+    curl -sL https://raw.githubusercontent.com/kodaxx/halo/main/dev_tools/bootstrap_build.sh | bash
     ```
-4.  Run the Builder:
-    ```bash
-    sudo ./dev_tools/build_image.sh
-    ```
-    *   **What it does**: Installs dependencies, compiles `nrc7292` driver, compiles Device Tree Overlay, and installs (but does not enable) systemd services.
+    *   **What it does**: Installs Git, clones this repo, and runs `build_image.sh`.
     *   **Result**: A fully prepped system that behaves like a normal Pi (SSH works, WiFi is managed by standard OS).
+
+> **Manual Method:**
+> ```bash
+> git clone https://github.com/kodaxx/halo.git
+> cd halo
+> sudo ./dev_tools/build_image.sh
+> ```
 
 ## 2. Verify The Build (On Raspberry Pi)
 Before shutting down, verify the build is healthy.
