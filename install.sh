@@ -38,6 +38,7 @@ setup_ap() {
 
     # 2. Dnsmasq Config
     if [ -f "assets/dnsmasq.conf" ]; then
+        mkdir -p /etc/dnsmasq.d
         cp assets/dnsmasq.conf /etc/dnsmasq.d/halo-ap.conf
     fi
 
@@ -86,7 +87,7 @@ if ! grep -q "dtoverlay=nrc-rpi" /boot/config.txt; then
         rm -rf /var/lib/apt/lists/*
         apt-get update --allow-releaseinfo-change -o Acquire::http::Pipeline-Depth=0 -o Acquire::http::No-Cache=True -o Acquire::BrokenProxy=true || log "Update finished with errors. Proceeding..."
     fi
-    apt-get install -y git device-tree-compiler raspberrypi-kernel-headers build-essential hostapd python3-flask python3-pip iptables bridge-utils batctl
+    apt-get install -y git device-tree-compiler raspberrypi-kernel-headers build-essential hostapd dnsmasq python3-flask python3-pip iptables bridge-utils batctl
     
     # 2. Compile & Install Overlay
     DTS_FILE="nrc7292_sw_pkg/dts/newracom_for_5.16_or_later.dts"
