@@ -6,7 +6,6 @@ set -e  # Exit on error
 
 # Configuration
 CONFIG_FILE="/boot/halo.json"
-# Correct runtime path for our setup
 DRIVER_DIR="$HOME/nrc_pkg"
 SCRIPT_PATH="$DRIVER_DIR/script/start.py"
 
@@ -20,6 +19,22 @@ error_exit() {
     log "ERROR: $*" >&2
     exit 1
 }
+
+# 0. CRITICAL PRE-CHECK: Protect networking from dhcpcd
+log "Checking dhcpcd configuration..."
+# We need to ensure dhcpcd does NOT try to manage br0 or bat0, or it will kill the connection
+if ! grep -q "denyinterfaces br0" /etc/dhcpcd.conf; then
+    log "WARNING: br0 is not protected from dhcpcd!"
+    log "Adding 'denyinterfaces br0 bat0' to /etc/dhcpcd.conf..."
+    echo "denyinterfaces br0 bat0" | sudo tee -a /etc/dhcpcd.conf >/dev/null
+    log "--------------------------------------------------------"
+    log "Configuration updated. You MUST restart networking to apply."
+    log "Please run this command (your connection will drop briefly):"
+    log "   sudo systemctl restart dhcpcd"
+    log "Then connect again and run this script."
+    log "--------------------------------------------------------"
+    exit 1
+fi
 
 # Create bridge using ip command
 create_bridge() {
@@ -78,37 +93,33 @@ if [ ! -f "$SCRIPT_PATH" ]; then
     error_exit "NRC startup script not found: $SCRIPT_PATH"
 fi
 
-# Ensure previous instances are killed
-sudo killall -9 wpa_supplicant 2>/dev/null || true
-# Do NOT kill dhcpcd, we need it for wlan0
-
-# Check if wlan1 is already up
-if ip link show wlan1 >/dev/null 2>&1; then
-    log "wlan1 already exists, assuming driver loaded."
+# Ensure previous instances are killed - BE GENTLE
+# Checking if nrc.ko is loaded
+if lsmod | grep -q "nrc"; then
+    log "Driver already loaded."
 else
+    log "Driver not loaded. Checking wpa_supplicant..."
+    # Only kill wpa_supplicant if it's interfering? 
+    # Actually, we need to load the driver.
+    
     log "Initializing HaLow radio..."
     cd "$DRIVER_DIR/script"
-    # Arg 1: 4 = Mesh AP (check this mapping?) 
-    # Based on start.py analysis:
-    # We used '1' for AP before.
-    # User assets used '4'. Let's trust assets for Mesh mode.
-    # Args: Mode(4=MeshAP?), ???(0), Country, Freq, MeshID
+    # Args: Mode(4=MeshAP), ???(0), Country, Freq, MeshID
     sudo python3 "$SCRIPT_PATH" 4 0 "$COUNTRY" "$FREQ" "$MESH_ID" || error_exit "HaLow initialization failed"
 fi
 
-# 4. Configure wlan1 IP (since we removed start.py auto-ip)
-log "Configuring wlan1..."
-# We don't need IP on wlan1 if it's bridged, usually?
-# But if it's batman-adv, we add wlan1 to bat0.
-
-# 5. Start Batman-adv
+# 4. Start Batman-adv
 log "Loading batman-adv module..."
 sudo modprobe batman-adv || true
 
 log "Adding wlan1 interface to batman-adv..."
 # Wait for wlan1 to appear
 sleep 2
-sudo batctl if add wlan1 || log "WARNING: Failed to add wlan1 to batman-adv"
+if ! ip link show wlan1 >/dev/null 2>&1; then
+    error_exit "wlan1 interface not found!"
+fi
+
+sudo batctl if add wlan1 || log "WARNING: Failed to add wlan1 to batman-adv (already added?)"
 
 log "Bringing up bat0 interface..."
 interface_up "bat0"
@@ -129,3 +140,4 @@ echo 0 | sudo tee /sys/devices/virtual/net/br0/bridge/multicast_snooping > /dev/
 log "=== Halo Mesh Startup Complete ==="
 log "Mesh Interface: bat0 (inside br0)"
 log "Management Interface: wlan0 (Keep Alive!)"
+log "You can now test connectivity on 10.0.0.1"
