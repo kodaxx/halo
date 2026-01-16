@@ -49,7 +49,7 @@ if command -v docker &> /dev/null; then
     docker run --privileged=true --rm \
         -v "$(pwd):/workdir" \
         cheyne/pishrink \
-        pishrink.sh -s "/workdir/$IMAGE_NAME"
+        pishrink -s "/workdir/$IMAGE_NAME"
         
     echo "PiShrink Complete."
 else
