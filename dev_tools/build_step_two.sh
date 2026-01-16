@@ -27,9 +27,9 @@ CURRENT_USER=$(whoami)
 
 echo "===  Setting up Clean EVK Environment in $LOCAL_PKG_DIR for user $CURRENT_USER ==="
 
-# Install Kernel Headers (Required for compilation) and hostapd
-echo "Installing Kernel Headers and Hostapd..."
-sudo apt-get install -y raspberrypi-kernel-headers build-essential hostapd
+# Install Runtime Dependencies
+echo "Installing Runtime Dependencies..."
+sudo apt-get install -y hostapd dnsmasq iptables bridge-utils batctl dkms
 
 # Unmask hostapd (it is often masked by default on RPi)
 sudo systemctl unmask hostapd
@@ -54,6 +54,11 @@ if [ -f "$BINARY_DIR/nrc.ko" ]; then
     cp "$BINARY_DIR/nrc.ko" "$LOCAL_PKG_DIR/evk/binary/nrc.ko"
 else
     echo "Prebuilt driver not found. Compiling Driver Locally..."
+    
+    # INSTALL BUILD DEPENDENCIES ONLY IF NEEDED
+    echo "Installing Build Toolchain (Headers, GCC)..."
+    sudo apt-get install -y raspberrypi-kernel-headers build-essential
+
     if [ ! -d "$DRIVER_SRC" ]; then
         echo "ERROR: Driver source not found at $DRIVER_SRC"
         exit 1
