@@ -44,14 +44,17 @@ if command -v docker &> /dev/null; then
     echo "Shrinking image and enabling auto-expand..."
     
     # Run PiShrink via Docker
-    # -s: Script to auto-expand on boot
-    # Volume mount current dir to /workdir
-    docker run --privileged=true --rm \
+    # Note: This is known to be flaky on macOS Docker due to loopback/permission issues.
+    # We allow it to fail so we can at least gzip the result.
+    if docker run --privileged=true --rm \
         -v "$(pwd):/workdir" \
         cheyne/pishrink \
-        pishrink -s "/workdir/$IMAGE_NAME"
-        
-    echo "PiShrink Complete."
+        pishrink -s "/workdir/$IMAGE_NAME"; then
+        echo "PiShrink Complete."
+    else
+        echo "WARNING: PiShrink failed (Common on macOS Docker)."
+        echo "Proceeding with standard gzip (Image size might be larger)..."
+    fi
 else
     echo "WARNING: Docker not found. Skipping PiShrink."
     echo "The image will be the full size of the SD card ($DISK_ID)."
