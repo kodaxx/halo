@@ -52,7 +52,6 @@ country=$COUNTRY
 network={
     ssid="$SSID"
     psk="$PASS"
-    key_mgmt=WPA-PSK
 }
 EOF
 
