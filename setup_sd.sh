@@ -21,7 +21,17 @@ echo "Found Boot Volume at: $BOOT_VOL"
 echo "Enabling SSH..."
 touch "$BOOT_VOL/ssh"
 
-# 2. Inject WiFi Credentials
+# 2. Inject Other Files (pi_files) if they exist
+PI_FILES_DIR="./pi_files"
+if [ -d "$PI_FILES_DIR" ]; then
+    echo "Copying contents of pi_files to SD card (excluding images)..."
+    # Use rsync to exclude huge image files and system junk
+    rsync -av --exclude="*.img" --exclude="*.xz" --exclude=".DS_Store" --exclude="wpa_supplicant.conf" "$PI_FILES_DIR/" "$BOOT_VOL/"
+else
+    echo "No pi_files directory found, skipping file injection."
+fi
+
+# 3. Inject WiFi Credentials (Last to overwrite any defaults)
 echo ""
 echo "Enter your HOME WiFi Credentials (to connect to internet for install):"
 read -p "SSID: " WIFI_SSID
@@ -40,16 +50,6 @@ network={
     key_mgmt=WPA-PSK
 }
 EOF
-
-# 3. Inject Other Files (pi_files) if they exist
-PI_FILES_DIR="./pi_files"
-if [ -d "$PI_FILES_DIR" ]; then
-    echo "Copying contents of pi_files to SD card (excluding images)..."
-    # Use rsync to exclude huge image files and system junk
-    rsync -av --exclude="*.img" --exclude="*.xz" --exclude=".DS_Store" "$PI_FILES_DIR/" "$BOOT_VOL/"
-else
-    echo "No pi_files directory found, skipping file injection."
-fi
 
 # 4. Optional: Enable USB Gadget Mode (Safety Net)
 read -p "Enable USB Gadget Mode (Ethernet over USB) as backup? [y/N] " ENABLE_GADGET
