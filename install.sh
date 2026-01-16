@@ -159,6 +159,12 @@ if [ ! -f /boot/halo.json ]; then
     log "Default config installed to /boot/halo.json"
 fi
 
+# 6a. Install Boot Config (Overlay, Gadget Mode, UART)
+if [ -f "assets/config.txt" ]; then
+    log "Installing optimized /boot/config.txt..."
+    cp assets/config.txt /boot/config.txt
+fi
+
 # 6b. Setup AP Mode (wlan0)
 log "Configuring Access Point (wlan0)..."
 if [ -f "assets/hostapd.conf" ]; then
