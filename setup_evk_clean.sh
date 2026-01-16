@@ -47,24 +47,34 @@ if [ -d "$LOCAL_PKG_DIR" ]; then
 fi
 cp -r "$SRC_EVK" "$LOCAL_PKG_DIR"
 
-# 2. COMPILE DRIVER (Fix for Invalid Module Format)
-echo "Compiling Driver Locally..."
-if [ ! -d "$DRIVER_SRC" ]; then
-    echo "ERROR: Driver source not found at $DRIVER_SRC"
-    exit 1
-fi
-cd "$DRIVER_SRC"
-echo "Current Directory: $(pwd)"
-make clean
-if make; then
-    echo "Driver Compiled Successfully."
-    cp "nrc.ko" "$LOCAL_PKG_DIR/sw/driver/nrc.ko"
-    # Also copy to evk/binary for consistency
+# 2. INSTALL DRIVER (Prebuilt or Compile)
+echo "Checking for driver..."
+if [ -f "$BINARY_DIR/nrc.ko" ]; then
+    echo "Found prebuilt driver at $BINARY_DIR/nrc.ko. Using it..."
+    mkdir -p "$LOCAL_PKG_DIR/sw/driver"
+    cp "$BINARY_DIR/nrc.ko" "$LOCAL_PKG_DIR/sw/driver/nrc.ko"
+    # Ensure it's also in evk/binary in the local pkg
     mkdir -p "$LOCAL_PKG_DIR/evk/binary"
-    cp "nrc.ko" "$LOCAL_PKG_DIR/evk/binary/nrc.ko"
+    cp "$BINARY_DIR/nrc.ko" "$LOCAL_PKG_DIR/evk/binary/nrc.ko"
 else
-    echo "ERROR: Driver compilation failed!"
-    exit 1
+    echo "Prebuilt driver not found. Compiling Driver Locally..."
+    if [ ! -d "$DRIVER_SRC" ]; then
+        echo "ERROR: Driver source not found at $DRIVER_SRC"
+        exit 1
+    fi
+    cd "$DRIVER_SRC"
+    echo "Current Directory: $(pwd)"
+    make clean
+    if make; then
+        echo "Driver Compiled Successfully."
+        cp "nrc.ko" "$LOCAL_PKG_DIR/sw/driver/nrc.ko"
+        # Also copy to evk/binary for consistency
+        mkdir -p "$LOCAL_PKG_DIR/evk/binary"
+        cp "nrc.ko" "$LOCAL_PKG_DIR/evk/binary/nrc.ko"
+    else
+        echo "ERROR: Driver compilation failed!"
+        exit 1
+    fi
 fi
 
 # 3. Install Firmware
