@@ -201,8 +201,11 @@ fi
 
 # 7. Cleanup & Final Security
 log "Disabling bootstrap service..."
-systemctl disable halo-bootstrap.service
-rm /etc/systemd/system/halo-bootstrap.service
+# Use || true so we don't crash if it doesn't exist (manual run case)
+systemctl disable halo-bootstrap.service 2>/dev/null || true
+if [ -f /etc/systemd/system/halo-bootstrap.service ]; then
+    rm /etc/systemd/system/halo-bootstrap.service
+fi
 systemctl daemon-reload
 
 # 8. Final Network Lockdown
