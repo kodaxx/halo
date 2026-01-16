@@ -1,13 +1,12 @@
 #!/bin/bash
 # firstboot.sh
-# User Tool: Activates the Halo Mesh Appliance
 # Run this ONCE after flashing the Golden Image.
 
 set -e
-LOG_FILE="/var/log/halo-finalize.log"
+LOG_FILE="/var/log/halo-firstboot.log"
 
 log() {
-    echo "[Halo Finalize] $(date '+%Y-%m-%d %H:%M:%S') - $1" | sudo tee -a "$LOG_FILE"
+    echo "[Halo Firstboot] $(date '+%Y-%m-%d %H:%M:%S') - $1" | sudo tee -a "$LOG_FILE"
     echo "$1"
 }
 
