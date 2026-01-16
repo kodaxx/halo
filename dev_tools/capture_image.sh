@@ -50,7 +50,7 @@ if command -v docker &> /dev/null; then
         --entrypoint "/bin/sh" \
         -v "$(pwd):/workdir" \
         cheyne/pishrink \
-        -c "cp /workdir/$IMAGE_NAME /tmp/working.img && pishrink -s /tmp/working.img && mv /tmp/working.img /workdir/$IMAGE_NAME"; then
+        -c "echo 'Step 1/3: Copying image to container (Process is silent, please wait)...' && cp /workdir/$IMAGE_NAME /tmp/working.img && echo 'Step 2/3: Running PiShrink...' && pishrink -s /tmp/working.img && echo 'Step 3/3: Copying image back to host...' && mv /tmp/working.img /workdir/$IMAGE_NAME"; then
         echo "PiShrink Complete."
     else
         echo "WARNING: PiShrink failed (Common on macOS Docker)."
