@@ -218,28 +218,57 @@ HTML_TEMPLATE = """
 # Valid Frequency Options (S1G -> 5GHz Alias)
 # Driver Formula: 5000 + (5 * Channel_Index)
 # Note: The *physical* frequency depends on the Country Code.
+
+# Valid Frequency Options (S1G -> 5GHz Alias)
+# Driver Formula: 5000 + (5 * Channel_Index)
+# Note: The *physical* frequency depends on the Country Code.
 FREQ_MAP = {
-    'US': [
+    'US': [ # 2MHz Bandwidth
         {'label': '909 MHz (Ch 153)', 'value': 5765},
         {'label': '915 MHz (Ch 156)', 'value': 5780},
-        {'label': '921 MHz (Ch 159 - Recommended)', 'value': 5795},
+        {'label': '921 MHz (Ch 159 - Rec.)', 'value': 5795},
         {'label': '925 MHz (Ch 161)', 'value': 5805},
     ],
-    'JP': [
-        {'label': '923.5 MHz (Ch 36)', 'value': 5180},
-        {'label': '924.5 MHz (Ch 37)', 'value': 5185},
-        {'label': '925.5 MHz (Ch 38)', 'value': 5190},
-        {'label': '926.5 MHz (Ch 39)', 'value': 5195},
+    'JP': [ # 1MHz Bandwidth (Default)
+        {'label': '921.0 MHz (Ch 40)', 'value': 5200},
+        {'label': '923.5 MHz (Ch 36 - 2MHz)', 'value': 5180},
+        {'label': '924.5 MHz (Ch 37 - 2MHz)', 'value': 5185},
     ],
-    'EU': [
+    'EU': [ # 1MHz Bandwidth
         {'label': '863.5 MHz (Ch 36)', 'value': 5180},
         {'label': '867.5 MHz (Ch 40)', 'value': 5200},
     ],
-    'TW': [
-        {'label': '800 MHz Range (Generic)', 'value': 5795}, # Placeholder
+    'TW': [ # 2MHz Bandwidth
+        {'label': '839.5 MHz (Ch 149)', 'value': 5745},
+        {'label': '843.5 MHz (Ch 151)', 'value': 5755},
+        {'label': '849.5 MHz (Ch 154)', 'value': 5770},
     ],
-    'KR': [
-        {'label': '900 MHz Range (Generic)', 'value': 5795}, # Placeholder
+    'CN': [ # 2MHz Bandwidth
+        {'label': '750 MHz (Ch 149)', 'value': 5745},
+        {'label': '752 MHz (Ch 151)', 'value': 5755},
+        {'label': '754 MHz (Ch 153)', 'value': 5765},
+        {'label': '756 MHz (Ch 155)', 'value': 5775},
+    ],
+    'K1': [ # KR 1MHz
+        {'label': '921.5 MHz (Ch 36)', 'value': 5180},
+        {'label': '922.5 MHz (Ch 37)', 'value': 5185},
+    ],
+    'K2': [ # KR 1MHz/2MHz
+        {'label': '927 MHz (Ch 42 - 2MHz)', 'value': 5210},
+        {'label': '929 MHz (Ch 43 - 2MHz)', 'value': 5215},
+        {'label': '925.5 MHz (Ch 36 - 1MHz)', 'value': 5180},
+    ],
+    'AU': [ # 1MHz & 2MHz
+        {'label': '917 MHz (Ch 153 - 2MHz)', 'value': 5765},
+        {'label': '921 MHz (Ch 155 - 2MHz)', 'value': 5775},
+        {'label': '927 MHz (Ch 158 - 2MHz)', 'value': 5790},
+        {'label': '915.5 MHz (Ch 36 - 1MHz)', 'value': 5180},
+    ],
+    'NZ': [ # Same as AU
+        {'label': '917 MHz (Ch 153 - 2MHz)', 'value': 5765},
+        {'label': '921 MHz (Ch 155 - 2MHz)', 'value': 5775},
+        {'label': '927 MHz (Ch 158 - 2MHz)', 'value': 5790},
+        {'label': '915.5 MHz (Ch 36 - 1MHz)', 'value': 5180},
     ]
 }
 
