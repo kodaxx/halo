@@ -185,7 +185,7 @@ if ! grep -q "127.0.0.1 $(hostname)" /etc/hosts; then
     echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
 fi
 
-# CRITICAL FIX: Patch start_mesh.sh path
+# Patch start_mesh.sh path
 # Because it runs as root, $HOME becomes /root, but we installed to /home/halo/nrc_pkg
 START_MESH_SCRIPT="$REPO_ROOT/scripts/start_mesh.sh"
 if [ -f "$START_MESH_SCRIPT" ]; then
