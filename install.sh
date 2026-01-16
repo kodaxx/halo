@@ -111,9 +111,16 @@ log "Firmware installed."
 log "Patching Scripts..."
 
 # Fix Permissions
+# 1. Local Package Scripts
 find "$LOCAL_PKG_DIR" -name "*.py" -exec chmod +x {} \;
 find "$LOCAL_PKG_DIR" -name "*.sh" -exec chmod +x {} \;
-chown -R "$USER_NAME:$USER_NAME" "$LOCAL_PKG_DIR" # Ensure user owns it all
+chown -R "$USER_NAME:$USER_NAME" "$LOCAL_PKG_DIR"
+
+# 2. Repo Scripts (Critical for systemd 203/EXEC error)
+chmod +x "$REPO_DIR/start_mesh_safe.sh"
+chmod +x "$REPO_DIR/gateway_monitor.sh"
+chmod +x "$REPO_DIR/web_admin.py"
+chown -R "$USER_NAME:$USER_NAME" "$REPO_DIR"
 
 # Patch start.py to not kill wlan0
 START_PY="$LOCAL_PKG_DIR/script/start.py"
