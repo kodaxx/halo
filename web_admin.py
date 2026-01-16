@@ -126,42 +126,67 @@ HTML_TEMPLATE = """
     <label>Mesh ID (Network Password)</label>
     <input type="text" name="mesh_id" value="{{ conf.mesh_id }}" required>
     
-    <label>Frequency / Channel</label>
-    <select name="freq" id="freq_select" onchange="checkCustom()" required>
-        <option value="5780" {% if conf.freq|string == '5780' %}selected{% endif %}>915 MHz (Channel 156)</option>
-        <option value="5795" {% if conf.freq|string == '5795' %}selected{% endif %}>921 MHz (Channel 159)</option>
-        <option value="custom" {% if conf.freq|string not in ['5780', '5795'] %}selected{% endif %}>Custom / Manual</option>
+    <label>Country (Regulatory Domain)</label>
+    <select name="country" id="country_select" onchange="updateChannels()">
+        {% for country in freq_map.keys() %}
+        <option value="{{ country }}" {% if conf.country == country %}selected{% endif %}>{{ country }}</option>
+        {% endfor %}
     </select>
     
-    <div id="custom_freq_div" style="display: {% if conf.freq|string not in ['5780', '5795'] %}block{% else %}none{% endif %}; margin-top: 10px;">
-        <label>Custom Frequency (Driver Alias Value)</label>
-        <input type="number" name="custom_freq" value="{{ conf.freq }}" placeholder="5795">
-        <span class="info">Required: Driver aliased frequency (e.g. 5795 = 921 MHz)</span>
-    </div>
-
+    <label>Channel / Frequency</label>
+    <select name="freq" id="freq_select" required>
+        <!-- Populated by JS -->
+    </select>
+    
+    <!-- Hidden data for JS -->
     <script>
-        function checkCustom() {
-            var val = document.getElementById("freq_select").value;
-            var div = document.getElementById("custom_freq_div");
-            var input = document.querySelector('input[name="custom_freq"]');
+        var freqMap = {{ freq_map|tojson }};
+        var currentFreq = "{{ conf.freq }}"; // value stored in config (e.g. 5795)
+        
+        function updateChannels() {
+            var country = document.getElementById("country_select").value;
+            var freqSelect = document.getElementById("freq_select");
             
-            if (val === "custom") {
-                div.style.display = "block";
-                // If switching to custom, keep current value if it's not one of the presets
-                // Otherwise clear it
-                if (input.value === "5780" || input.value === "5795") {
-                    input.value = ""; 
+            // Clear existing
+            freqSelect.innerHTML = "";
+            
+            // Get channels for country
+            var channels = freqMap[country] || [];
+            
+            if (channels.length === 0) {
+                 var opt = document.createElement("option");
+                 opt.text = "No channels defined for " + country;
+                 freqSelect.add(opt);
+                 return;
+            }
+            
+            var selectedFound = false;
+            
+            channels.forEach(function(ch) {
+                var opt = document.createElement("option");
+                opt.value = ch.value;
+                opt.text = ch.label;
+                
+                // Select if matches current config
+                if (String(ch.value) === String(currentFreq)) {
+                    opt.selected = true;
+                    selectedFound = true;
                 }
-            } else {
-                div.style.display = "none";
-                input.value = val;
+                
+                freqSelect.add(opt);
+            });
+            
+            // If current freq not found (diff country?), select first
+            if (!selectedFound && channels.length > 0) {
+                freqSelect.selectedIndex = 0;
             }
         }
+        
+        // Init on load
+        window.onload = function() {
+            updateChannels();
+        };
     </script>
-    
-    <label>Country Code</label>
-    <input type="text" name="country" value="{{ conf.country }}" maxlength="2" pattern="[A-Z]{2}" required>
-    <span class="info">ISO 3166-1 alpha-2 code (e.g., US, GB, DE)</span>
     
     <label>Internet Gateway Mode</label>
     <select name="gateway" required>
@@ -189,14 +214,32 @@ HTML_TEMPLATE = """
 """
 
 
+
 # Valid Frequency Options (S1G -> 5GHz Alias)
 # Driver Formula: 5000 + (5 * Channel_Index)
+# Note: The *physical* frequency depends on the Country Code.
 FREQ_MAP = {
-    # US S1G Channels (2MHz Bandwidth)
     'US': [
-        {'label': '915 MHz (Ch 156)', 'value': 5780},  # 156 * 5 + 5000 = 5780
-        {'label': '921 MHz (Ch 159)', 'value': 5795},  # 159 * 5 + 5000 = 5795
-        {'label': 'Custom (Expert)', 'value': 'custom'}
+        {'label': '909 MHz (Ch 153)', 'value': 5765},
+        {'label': '915 MHz (Ch 156)', 'value': 5780},
+        {'label': '921 MHz (Ch 159 - Recommended)', 'value': 5795},
+        {'label': '925 MHz (Ch 161)', 'value': 5805},
+    ],
+    'JP': [
+        {'label': '923.5 MHz (Ch 36)', 'value': 5180},
+        {'label': '924.5 MHz (Ch 37)', 'value': 5185},
+        {'label': '925.5 MHz (Ch 38)', 'value': 5190},
+        {'label': '926.5 MHz (Ch 39)', 'value': 5195},
+    ],
+    'EU': [
+        {'label': '863.5 MHz (Ch 36)', 'value': 5180},
+        {'label': '867.5 MHz (Ch 40)', 'value': 5200},
+    ],
+    'TW': [
+        {'label': '800 MHz Range (Generic)', 'value': 5795}, # Placeholder
+    ],
+    'KR': [
+        {'label': '900 MHz Range (Generic)', 'value': 5795}, # Placeholder
     ]
 }
 
@@ -210,23 +253,26 @@ def validate_config(config):
     elif len(config['mesh_id']) > 32:
         errors.append("mesh_id must be 32 characters or less")
     
-    # Validate frequency (Must support Aliased 5GHz values)
-    try:
-        freq = int(config.get('freq', 0))
-        # Allow S1G range (902-928) OR Driver Alias range (5000-6000)
-        if not ((902 <= freq <= 928) or (5000 <= freq <= 6000)):
-            errors.append("Frequency must be valid S1G (900s) or Aliased 5GHz (5000s)")
-    except (ValueError, TypeError):
-        errors.append("Frequency must be a valid number")
-    
     # Validate country code
     country = config.get('country', '').upper()
     if not country or len(country) != 2:
         errors.append("Country code must be exactly 2 characters")
-    elif not country.isalpha():
-        errors.append("Country code must contain only letters")
+    elif country not in FREQ_MAP:
+        errors.append(f"Country '{country}' is not supported yet (Supported: {', '.join(FREQ_MAP.keys())})")
     else:
         config['country'] = country
+    
+    # Validate frequency (Must be in the allowed list for the country)
+    try:
+        freq = int(config.get('freq', 0))
+        valid_values = [item['value'] for item in FREQ_MAP.get(country, [])]
+        
+        # We allow custom values ONLY if they match the driver alias format (5000-6000)
+        # But per user request, UI only shows dropdown. Backend should technically allow valid aliases.
+        if freq not in valid_values and not (5000 <= freq <= 6000):
+             errors.append(f"Invalid frequency {freq} for country {country}")
+    except (ValueError, TypeError):
+        errors.append("Frequency must be a valid number")
     
     # Validate gateway mode
     if config.get('gateway') not in ['auto', 'off', 'on']:
@@ -269,7 +315,7 @@ def index():
         # Get form data
         new_config = {
             'mesh_id': request.form.get('mesh_id', conf.get('mesh_id', '')),
-            'freq': request.form.get('custom_freq') if request.form.get('freq') == 'custom' or request.form.get('custom_freq') else request.form.get('freq', conf.get('freq', '')),
+            'freq': request.form.get('freq', conf.get('freq', '')),
             'country': request.form.get('country', conf.get('country', 'US')),
             'gateway': request.form.get('gateway', conf.get('gateway', 'auto')),
             'ip_mode': request.form.get('ip_mode', conf.get('ip_mode', 'smart')),
@@ -299,7 +345,7 @@ def index():
             logger.error(f"Failed to write config: {e}")
             return f"Error: Could not write configuration ({e})", 500
     
-    return render_template_string(HTML_TEMPLATE, conf=conf)
+    return render_template_string(HTML_TEMPLATE, conf=conf, freq_map=FREQ_MAP)
 
 @app.route('/health', methods=['GET'])
 def health():
