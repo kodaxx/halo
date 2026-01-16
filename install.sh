@@ -80,7 +80,12 @@ if ! grep -q "dtoverlay=nrc-rpi" /boot/config.txt; then
     fi
     
     # 1. Update & Dependencies
-    apt-get update
+    log "Updating Package Lists..."
+    if ! apt-get update --allow-releaseinfo-change; then
+        log "APT Update failed. Clearing lists and retrying..."
+        rm -rf /var/lib/apt/lists/*
+        apt-get update --allow-releaseinfo-change
+    fi
     apt-get install -y git device-tree-compiler raspberrypi-kernel-headers build-essential hostapd python3-flask python3-pip iptables bridge-utils batctl
     
     # 2. Compile & Install Overlay

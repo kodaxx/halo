@@ -11,7 +11,14 @@ echo "========================================"
 # 1. Install Git if missing
 if ! command -v git &> /dev/null; then
     echo "Installing Git..."
-    sudo apt-get update
+    # Robust APT Update Logic
+    # 1. Allow release info changes (bullseye stable -> oldstable etc)
+    # 2. If update fails (hash mismatch), clear lists and retry
+    if ! sudo apt-get update --allow-releaseinfo-change; then
+        echo "APT Update failed. Clearing lists and retrying..."
+        sudo rm -rf /var/lib/apt/lists/*
+        sudo apt-get update --allow-releaseinfo-change
+    fi
     sudo apt-get install -y git
 fi
 
