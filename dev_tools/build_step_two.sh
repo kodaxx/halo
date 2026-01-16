@@ -198,30 +198,7 @@ fi
 echo "Driver compiled and installed."
 echo "Firmware copied to /lib/firmware/bd.dat."
 
-# 8. Install Systemd Services
-echo "Installing Systemd Services..."
-cp services/*.service /etc/systemd/system/
-
-# Fix paths in services to match REPO_ROOT (determined at start of script)
-# We update the placeholders to the actual permanent path
-sed -i "s|/home/halo/halo|$REPO_ROOT|g" /etc/systemd/system/halo-*.service
-# Also ensure User= is correct (if we aren't 'halo', this might matter, but usually we build as 'halo')
-sed -i "s|User=halo|User=$CURRENT_USER|g" /etc/systemd/system/halo-*.service
-
-systemctl daemon-reload
-
-# 8b. Start Active Services (Mesh, Web, Monitor) for Verification
-echo "Enabling and Starting Core Services..."
-systemctl enable --now halo-mesh.service
-systemctl enable --now halo-web.service
-systemctl enable --now halo-monitor.service
-
-# 8c. Stage Provision Service (Do NOT start - Firstboot/User will run this)
-echo "Staging Provision Service (Disabled)..."
-systemctl disable halo-provision.service
-# Note: firstboot.sh or the user will trigger provisioning logic.
-
-# 9. Install Default Configs
+# 8. Install Default Configs (BEFORE enabling services)
 echo "Installing Default Configurations..."
 if [ ! -f /boot/halo.json ]; then
     # Prioritize configs/halo.json if exists, else root halo.json
@@ -233,6 +210,29 @@ if [ ! -f /boot/halo.json ]; then
     # Set permissions so web_admin can read/write
     chmod 666 /boot/halo.json
 fi
+
+# 9. Install Systemd Services
+echo "Installing Systemd Services..."
+cp services/*.service /etc/systemd/system/
+
+# Fix paths in services to match REPO_ROOT (determined at start of script)
+# We update the placeholders to the actual permanent path
+sed -i "s|/home/halo/halo|$REPO_ROOT|g" /etc/systemd/system/halo-*.service
+# Also ensure User= is correct (if we aren't 'halo', this might matter, but usually we build as 'halo')
+sed -i "s|User=halo|User=$CURRENT_USER|g" /etc/systemd/system/halo-*.service
+
+systemctl daemon-reload
+
+# 9b. Start Active Services (Mesh, Web, Monitor) for Verification
+echo "Enabling and Starting Core Services..."
+systemctl enable --now halo-mesh.service
+systemctl enable --now halo-web.service
+systemctl enable --now halo-monitor.service
+
+# 9c. Stage Provision Service (Do NOT start - Firstboot/User will run this)
+echo "Staging Provision Service (Disabled)..."
+systemctl disable halo-provision.service
+# Note: firstboot.sh or the user will trigger provisioning logic.
 
 # 10. Permission Fixes for Repo Scripts
 chmod +x "$REPO_ROOT/scripts/"*.sh
