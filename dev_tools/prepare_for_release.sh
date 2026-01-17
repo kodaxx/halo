@@ -58,12 +58,12 @@ if [ -n "$SUDO_USER" ]; then
 fi
 
 # 5. Optional: Reset SSH Host Keys
-# This forces the Pi to generate new unique keys on next boot.
-# WARNING: This will cause a 'Remote Host Identification Changed' warning for you next time.
-echo "Removing SSH Host Keys (will regenerate on next boot)..."
-rm -f /etc/ssh/ssh_host_*
+# WARNING: We are commenting this out because it caused boot issues (no SSH) on the last build.
+# The 'regenerate_ssh_host_keys' service might not be present or effective on this minimal image.
+# echo "Removing SSH Host Keys (will regenerate on next boot)..."
+# rm -f /etc/ssh/ssh_host_*
 # Ensure regeneration service is enabled
-systemctl enable regenerate_ssh_host_keys 2>/dev/null || true
+# systemctl enable regenerate_ssh_host_keys 2>/dev/null || true
 
 echo "========================================================"
 echo "   CLEANUP COMPLETE"
