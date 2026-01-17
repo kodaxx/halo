@@ -224,10 +224,18 @@ sed -i "s|User=halo|User=$CURRENT_USER|g" /etc/systemd/system/halo-*.service
 systemctl daemon-reload
 
 # 9b. Start Active Services (Mesh, Web, Monitor) for Verification
-echo "Enabling and Starting Core Services..."
-systemctl enable --now halo-mesh.service
-systemctl enable --now halo-web.service
-systemctl enable --now halo-monitor.service
+# 9b. Services state
+# CRITICAL: We DO NOT enable these by default.
+# If we enable them, the device boots as an AP (Mesh), preventing the user
+# from connecting via wpa_supplicant to their home WiFi to run firstboot.sh.
+echo "Staging Services (All Disabled for Distribution)..."
+systemctl disable halo-mesh.service
+systemctl disable halo-web.service
+systemctl disable halo-monitor.service
+
+# Hostapd/DNSMasq also disabled so wlan0 stays as a client initially
+systemctl disable hostapd
+systemctl disable dnsmasq
 
 # 9c. Stage Provision Service (Do NOT start - Firstboot/User will run this)
 echo "Staging Provision Service (Disabled)..."
