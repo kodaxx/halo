@@ -106,9 +106,6 @@ else
          echo "Creating 'ssh' file..."
          touch "$MOUNT_POINT/ssh"
          
-         # Note: userconf.txt is NOT injected because the 'halo' user
-         # already exists in this captured image.
-         
          # 3. Cleanup
          echo "Unmounting..."
          umount "$MOUNT_POINT"
