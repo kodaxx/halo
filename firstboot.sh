@@ -1,6 +1,6 @@
 #!/bin/bash
 # firstboot.sh
-# Run this ONCE after flashing the Golden Image.
+# Run this ONCE after flashing the base Image.
 
 set -e
 LOG_FILE="/var/log/halo-firstboot.log"
@@ -29,7 +29,7 @@ log "Starting Activation... (User: $USER_NAME)"
 # 1. Hardware Check
 log "Checking hardware..."
 if ! ip link show wlan1 >/dev/null 2>&1; then
-    log "WARNING: wlan1 interface not found! Is the Halo adapter connected?"
+    log "WARNING: wlan1 interface not found! Is the WiFi HaLow Hat connected?"
     log "Proceeding anyway, but mesh services may fail."
 fi
 
@@ -58,10 +58,7 @@ else
 fi
 
 # 4. Enable Services
-log "Enabling Systemd Services..."
-systemctl enable halo-mesh.service
-systemctl enable halo-web.service
-systemctl enable halo-monitor.service
+log "Enabling Systemd AP Services..."
 # hostapd and dnsmasq are needed for AP
 systemctl enable hostapd
 systemctl enable dnsmasq
