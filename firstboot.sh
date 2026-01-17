@@ -33,35 +33,49 @@ if ! ip link show wlan1 >/dev/null 2>&1; then
     log "Proceeding anyway, but mesh services may fail."
 fi
 
-# 2. Generate & Display Credentials (SAFE STEP)
-# We do this EARLY so you see them even if the network cuts out later.
+# 2. Generate & Display Credentials
+# We do this now so you see them even if the network cuts out later.
 log "Generating Security Credentials..."
-CPU_SERIAL=$(grep "Serial" /proc/cpuinfo | awk -F': ' '{print $2}' | tr -d ' ' | tr -d '\t')
+
+# MAC Address Suffix for SSID (Unique to device)
 MAC_SUFFIX=$(cat /sys/class/net/wlan0/address | awk -F: '{print $5$6}' | tr '[:lower:]' '[:upper:]')
-
-# Fallback
-if [ -z "$CPU_SERIAL" ] || [ ${#CPU_SERIAL} -lt 8 ]; then
-     CPU_SERIAL="halo_default_$MAC_SUFFIX"
-fi
-
 NEW_SSID="Halo_$MAC_SUFFIX"
-NEW_PASS="$CPU_SERIAL"
+
+# Generate Random Password (8-13 chars)
+# 8 chars minimum + random 0-5 chars extra
+EXTRA_LEN=$((RANDOM % 6))
+PASS_LEN=$((8 + EXTRA_LEN))
+# Use openssl for secure random string, filter for alphanumeric (readability)
+NEW_PASS=$(openssl rand -base64 20 | tr -dc 'a-zA-Z0-9' | head -c $PASS_LEN)
+
+# Fallback if openssl fails
+if [ -z "$NEW_PASS" ] || [ ${#NEW_PASS} -lt 8 ]; then
+     log "WARNING: Random generation failed. Using fallback."
+     NEW_PASS="halo_default_$MAC_SUFFIX"
+fi
 
 echo ""
 echo "========================================================"
-echo "   HALO APPLIANCE CREDENTIALS"
+echo "   HALO CREDENTIALS"
 echo "========================================================"
 echo "SSID: $NEW_SSID"
 echo "PASS: $NEW_PASS"
-echo "ADMIN: http://10.0.0.1"
+echo "ADMIN: http://10.0.0.1 or http://gw.halo.local"
+echo "QR: WIFI:S:$NEW_SSID;T:WPA;P:$NEW_PASS;H:true;;"
 echo "========================================================"
 echo "Make sure to SAVE these now!"
 echo "========================================================"
 echo ""
+log "System will REBOOT in about 60 seconds."
+log "After reboot, the device will be in Mesh/AP mode."
+log "You will see your Halo AP on your phone or computer."
+log "Connect to the WiFi shown above"
+log "Rebooting in 60s..."
 sleep 2
 
-# 3. Install Access Point Configuration
+# 3. Install Access Point Configuration (Might drop SSH here)
 log "Installing Access Point Configurations..."
+log "SSH may drop connection while this happens..."
 if [ -f "configs/hostapd.conf" ]; then
     # This overwrites /etc/hostapd/hostapd.conf with the DEFAULT (Halo_SETUP)
     cp configs/hostapd.conf /etc/hostapd/hostapd.conf
@@ -97,7 +111,7 @@ systemctl enable halo-mesh.service
 systemctl enable halo-web.service
 systemctl enable halo-monitor.service
 
-# 6. Network Lockdown (RISKY STEP - Might drop SSH)
+# 6. Network Lockdown
 log "Locking down network interfaces..."
 if ! grep -q "denyinterfaces.*wlan1" /etc/dhcpcd.conf; then
     # Remove old verify lines to avoid duplicates
@@ -111,7 +125,7 @@ fi
 log "=== ACTIVATION COMPLETE ==="
 log "System will REBOOT in 30 seconds."
 log "After reboot, the device will be in Mesh/AP mode."
-log "Connect to the WiFi shown above and visit http://10.0.0.1"
+log "Connect to the WiFi shown above and visit http://gw.halo.local or http://10.0.0.1"
 log "Rebooting in 30s..."
 
 sleep 30

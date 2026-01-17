@@ -14,21 +14,20 @@ if grep -q "Halo_SETUP" "$HOSTAPD_CONF"; then
         NEW_PASS="$2"
     else
         echo "Generating unique credentials..."
-        # Safer parsing for Serial (handles tabs/spaces correctly)
-        CPU_SERIAL=$(grep "Serial" /proc/cpuinfo | awk -F': ' '{print $2}' | tr -d ' ' | tr -d '\t')
         
         # MAC Address (Unique to Wi-Fi Chip) - Used for SSID Suffix
         MAC_SUFFIX=$(cat /sys/class/net/wlan0/address | awk -F: '{print $5$6}' | tr '[:lower:]' '[:upper:]')
-        
-        # Ensure Serial is valid.
-        if [ -z "$CPU_SERIAL" ] || [ ${#CPU_SERIAL} -lt 8 ]; then
-             echo "WARNING: Failed to extract valid CPU Serial. Using fallback."
-             CPU_SERIAL="halo_default_$MAC_SUFFIX"
-        fi
-
-        # 2. Define Credentials
         NEW_SSID="Halo_$MAC_SUFFIX"
-        NEW_PASS="$CPU_SERIAL"
+        
+        # Generator Random Password (8-13 chars)
+        EXTRA_LEN=$((RANDOM % 6))
+        PASS_LEN=$((8 + EXTRA_LEN))
+        NEW_PASS=$(openssl rand -base64 20 | tr -dc 'a-zA-Z0-9' | head -c $PASS_LEN)
+        
+        # Fallback
+        if [ -z "$NEW_PASS" ] || [ ${#NEW_PASS} -lt 8 ]; then
+             NEW_PASS="halo_default_$MAC_SUFFIX"
+        fi
     fi
 
     # 3. Apply to Hostapd Config
