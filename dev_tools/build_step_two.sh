@@ -254,6 +254,5 @@ chmod +x "$REPO_ROOT/dashboard/web_admin.py"
 chmod +x "$REPO_ROOT/firstboot.sh"
 
 echo "=== BUILD COMPLETE ==="
-echo "This system is now a 'Golden Master'."
 echo "1. Shutdown using: 'sudo shutdown now'"
 echo "2. Capture SD Card on Mac using 'dev_tools/capture_image.sh'"
