@@ -36,7 +36,7 @@ fi
 # 2. Generate & Display Credentials
 # We do this now so you see them even if the network cuts out later.
 
-# Ensure qrencode is installed
+# Ensure qrencode is installed, this is temporary until I rebuild the base image
 if ! command -v qrencode &> /dev/null; then
     log "Installing qrencode..."
     apt-get install -y qrencode || log "WARNING: Failed to install qrencode. QR code will not be displayed."

@@ -1,13 +1,13 @@
 #!/bin/bash
 # Halo Security Provisioning
-# Generates unique, deterministic Wi-Fi credentials based on Hardware ID.
+# Generates random Wi-Fi credentials.
 
 HOSTAPD_CONF="/etc/hostapd/hostapd.conf"
 # Check if we have already provisioned (Look for factory default)
 if grep -q "Halo_SETUP" "$HOSTAPD_CONF"; then
     echo "Provisioning new Wi-Fi Credentials..."
 
-    # 1. Get Unique Hardware IDs or Use Provided Args
+    # 1. Generate New Credentials or Use Provided Args
     if [ -n "$1" ] && [ -n "$2" ]; then
         echo "Using provided credentials..."
         NEW_SSID="$1"
