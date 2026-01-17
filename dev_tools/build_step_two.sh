@@ -237,12 +237,7 @@ systemctl disable halo-monitor.service
 systemctl disable hostapd
 systemctl disable dnsmasq
 
-# 9c. Stage Provision Service (Do NOT start - Firstboot/User will run this)
-echo "Staging Provision Service (Disabled)..."
-systemctl disable halo-provision.service
-# Note: firstboot.sh or the user will trigger provisioning logic.
-
-# 10. Permission Fixes for Repo Scripts
+# 9c. Permission Fixes for Repo Scripts
 chmod +x "$REPO_ROOT/scripts/"*.sh
 chmod +x "$REPO_ROOT/dashboard/web_admin.py"
 chmod +x "$REPO_ROOT/firstboot.sh"
