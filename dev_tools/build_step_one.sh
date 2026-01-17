@@ -11,25 +11,20 @@ set -e
 
 echo "=== Halo Build: Step 1/2 ==="
 
-# 1. Lock Kernel Version (Prevent upgrade to incompatible 6.x)
-echo "[1/4] Locking kernel version..."
-if ! mapfile -t held_packages < <(apt-mark showhold); then
-     held_packages=()
-fi
-
-if [[ ! " ${held_packages[*]} " =~ " raspberrypi-kernel " ]]; then
-    sudo apt-mark hold raspberrypi-kernel raspberrypi-bootloader raspberrypi-kernel-headers
-    echo "Kernel pinned."
-else
-    echo "Kernel already pinned."
-fi
-
-# 2. System Update
-echo "[2/4] Updating system packages..."
+# 1. Update & Sync Kernel/Headers (CRITICAL)
+echo "[1/4] syncing system kernel and headers..."
 sudo apt-get update
-# We can safely upgrade now because kernel is held
-sudo apt-get upgrade -y
-sudo apt-get install -y git device-tree-compiler
+# Force full upgrade first to get latest kernel
+sudo apt-get full-upgrade -y
+
+# Install headers NOW to ensure they match the kernel we just installed
+sudo apt-get install -y raspberrypi-kernel-headers git device-tree-compiler
+
+# 2. Lock Kernel (Now that we are synced)
+echo "[2/4] Locking kernel version..."
+# We lock BOTH to ensure they stay in sync
+sudo apt-mark hold raspberrypi-kernel raspberrypi-bootloader raspberrypi-kernel-headers
+echo "Kernel and Headers synced and pinned."
 
 # 3. Clone Repository
 echo "[3/4] Ensuring Repository..."
