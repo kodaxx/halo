@@ -1,6 +1,6 @@
 #!/bin/bash
 # test_build.sh
-# Developer Tool: Verifies the "Golden Master" build state.
+# Developer Tool: Verifies the base image build state.
 # Run this AFTER build_image.sh and BEFORE capture_image.sh.
 # It manually loads the driver to verify hardware/software integration.
 
@@ -15,7 +15,7 @@ pass() { echo -e "${GREEN}[PASS] ${NC}$1"; }
 fail() { echo -e "${RED}[FAIL] ${NC}$1"; exit 1; }
 warn() { echo -e "${YELLOW}[WARN] ${NC}$1"; }
 
-echo "=== Halo Golden Master Verification ==="
+echo "=== Halo Base Image Verification ==="
 
 # 0. User/Path Detection
 cd "$(dirname "$0")/.."
@@ -31,14 +31,20 @@ DRIVER_PATH="$LOCAL_PKG_DIR/sw/driver/nrc.ko"
 echo "Detected User: $USER_NAME"
 echo "Driver Path:   $DRIVER_PATH"
 
-# 1. Check Overlay
+# 1. Start Active Services (Mesh, Web, Monitor) for Verification
+echo "Enabling and Starting Core Services for Testing..."
+systemctl enable --now halo-mesh.service
+systemctl enable --now halo-web.service
+systemctl enable --now halo-monitor.service
+
+# 2. Check Overlay
 if grep -q "dtoverlay=nrc-rpi" /boot/config.txt; then
     pass "Overlay configured in /boot/config.txt"
 else
     fail "Overlay MISSING from /boot/config.txt"
 fi
 
-# 2. Check & Test Driver Load
+# 3. Check & Test Driver Load
 if lsmod | grep -q "nrc"; then
     pass "nrc.ko module is already loaded"
 else
@@ -56,14 +62,14 @@ else
     fi
 fi
 
-# 3. Check Interface wlan1
+# 4. Check Interface wlan1
 if ip link show wlan1 >/dev/null 2>&1; then
     pass "Interface wlan1 exists and is visible"
 else
     fail "Interface wlan1 NOT FOUND (Driver loaded but interface missing)"
 fi
 
-# 4. Check Services (Should be installed but DISABLED)
+# 5. Check Services (Should be installed but DISABLED)
 echo "Checking Service States..."
 declare -a services=("halo-mesh" "halo-web" "halo-monitor")
 for svc in "${services[@]}"; do
@@ -80,14 +86,14 @@ for svc in "${services[@]}"; do
     fi
 done
 
-# 5. Check Firmware
+# 6. Check Firmware
 if [ -f /lib/firmware/nrc7292_cspi.bin ] && [ -f /lib/firmware/bd.dat ]; then
     pass "Firmware files present in /lib/firmware"
 else
     fail "Firmware files MISSING in /lib/firmware/"
 fi
 
-# 6. Check Dmesg for obvious errors
+# 7. Check Dmesg for obvious errors
 echo "Checking dmesg for nrc errors..."
 if dmesg | grep -i "nrc" | grep -E "error|fail|crash|trace"; then
     warn "Found possible ERRORS in dmesg:"
@@ -97,10 +103,20 @@ else
     pass "No obvious driver errors found in dmesg"
 fi
 
+# 8. Services state
+# CRITICAL: We NEED to disable these after testing.
+# If we enable them, the device boots as an AP (Mesh), preventing the user
+# from connecting via wpa_supplicant to their home WiFi to run firstboot.sh.
+echo "Disabling Services and Staging for Distribution..."
+systemctl disable halo-mesh.service
+systemctl disable halo-web.service
+systemctl disable halo-monitor.service
+
 echo "=== Verification Complete ==="
 echo "   wlan1 is UP and ready."
 echo "   Services are staged."
 echo "   System is ready for capture."
 echo ""
-echo "NOTE: You may want to reboot or 'rmmod nrc' before capturing to leave a clean state,"
-echo "      although the capture script works either way."
+echo "You may want to run the prepare_for_release.sh script to clean up the system."
+echo "This will remove the WiFi credentials, logs, and Bash history."
+echo "You can run it like this: ./prepare_for_release.sh"

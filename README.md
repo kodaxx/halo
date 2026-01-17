@@ -1,4 +1,4 @@
-# Halo Mesh Appliance
+# Halo - WiFi HaLow Mesh Node
 
 Turn your Raspberry Pi into a secure, long-range HaLow Mesh node in minutes.
 
@@ -10,20 +10,20 @@ Turn your Raspberry Pi into a secure, long-range HaLow Mesh node in minutes.
 ## Installation
 
 ### 1. Flash the Image
-1.  Download the latest `halo_v1.img.gz`.
+1.  Download the latest Halo release image `halo_[release].img.gz`.
 2.  Use [Raspberry Pi Imager](https://www.raspberrypi.com/software/) or [Balena Etcher](https://etcher.balena.io/) to flash the image to your SD Card.
 
 ### 2. Configure WiFi & SSH
 **Crucial Step**: You need to get the Pi on your network to access it.
 
-**Option A: Raspberry Pi Imager (Recommended)**
-*   When flashing, click the **Settings (Gear) Icon**.
+**Option A: Raspberry Pi Imager**
+*   When flashing, use these custom **Settings**.
 *   Enable **SSH**.
-*   Set **username and password**.
+*   Set **username and password**. MUST be `halo`/`halo`.
 *   Configure **Wireless LAN** with your home WiFi details.
 *   *Then* click **Write**.
 
-**Option B: Manual Method**
+**Option B: Manual Method (Recommended)**
 *   After flashing, re-insert the SD card into your computer.
 *   Create a file named `ssh` (no extension) in the `bootfs` volume.
 *   Create a file named `wpa_supplicant.conf` in the `bootfs` volume with your WiFi details.
@@ -50,4 +50,4 @@ Turn your Raspberry Pi into a secure, long-range HaLow Mesh node in minutes.
 
 ## Usage
 *   **Connect**: Look for WiFi SSID `Halo_XXXX` (password presented during activation).
-*   **Admin**: Visit `http://10.0.0.1` to monitor the mesh and configure settings.
+*   **Admin**: Visit `http://gw.halo.local` or `http://10.0.0.1` to monitor the mesh and configure settings.

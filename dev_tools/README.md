@@ -27,7 +27,8 @@ curl -sL https://raw.githubusercontent.com/kodaxx/halo/main/dev_tools/build_step
 ### Step 2: Finalize (Run on Pi after Reboot)
 SSH back in and run:
 ```bash
-sudo ~/halo/dev_tools/build_step_two.sh
+cd halo
+sudo ./dev_tools/build_step_two.sh
 ```
 **Action**: This compiles the driver, installs services, and prepares the system for capture.
 **Result**: A base image ready for shutdown and capture.
@@ -44,8 +45,7 @@ Before shutting down, verify the build is healthy and scrub it for release.
 2.  **Cleanup (CRITICAL) & Shutdown**
     Remove your home WiFi credentials, SSH keys, and logs before capturing. This prevents leaking your secrets in the image.
     ```bash
-    sudo ~/halo/dev_tools/prepare_for_release.sh
-    sudo shutdown -h now
+    sudo ./dev_tools/prepare_for_release.sh
     ```
 
 ## 3. Capture The Image (On Mac)

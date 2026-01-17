@@ -19,15 +19,10 @@ if [ -f /etc/wpa_supplicant/wpa_supplicant.conf ]; then
     echo "Removing /etc/wpa_supplicant/wpa_supplicant.conf..."
     rm /etc/wpa_supplicant/wpa_supplicant.conf
     
-    # recreate a dummy empty file to satisfy some services if needed, 
-    # or let firstboot handle it. We'll create a generic fresh one.
-    cat > /etc/wpa_supplicant/wpa_supplicant.conf <<EOF
-ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-update_config=1
-country=US
-
-# Credentials removed for release.
-EOF
+    # We create a fresh, empty file with the correct permissions. 
+    # This ensures wpa_supplicant can start even if the user forgets to inject wifi credentials.
+    echo "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev" > /etc/wpa_supplicant/wpa_supplicant.conf
+    echo "update_config=1" >> /etc/wpa_supplicant/wpa_supplicant.conf
     chmod 600 /etc/wpa_supplicant/wpa_supplicant.conf
 fi
 
@@ -57,16 +52,26 @@ if [ -n "$SUDO_USER" ]; then
     cat /dev/null > /home/$SUDO_USER/.bash_history
 fi
 
-# 5. Optional: Reset SSH Host Keys
-# WARNING: We are commenting this out because it caused boot issues (no SSH) on the last build.
-# The 'regenerate_ssh_host_keys' service might not be present or effective on this minimal image.
-# echo "Removing SSH Host Keys (will regenerate on next boot)..."
-# rm -f /etc/ssh/ssh_host_*
+# 5. Reset SSH Host Keys
+echo "Removing SSH Host Keys (will regenerate on next boot)..."
+rm -f /etc/ssh/ssh_host_*
+
+# 6. Enable First-Run Services
+echo "Enabling First-Run Services..."
 # Ensure regeneration service is enabled
-# systemctl enable regenerate_ssh_host_keys 2>/dev/null || true
+systemctl enable regenerate_ssh_host_keys 2>/dev/null || true
+# Ensure the service that looks for 'wpa_supplicant.conf' in the boot partition is active.
+systemctl enable raspberrypi-net-mods
+
+# 7. Reset Machine ID. This is critical for DHCP to assign a new IP address.
+# We truncate the file instead of deleting it to preserve permissions.
+truncate -s 0 /etc/machine-id
+rm /var/lib/dbus/machine-id
+ln -s /etc/machine-id /var/lib/dbus/machine-id
 
 echo "========================================================"
 echo "   CLEANUP COMPLETE"
 echo "========================================================"
-echo "Action: Shutdown the Pi immediately and capture the image."
-echo "Command: sudo shutdown -h now"
+echo "Shutting down in 5 seconds..."
+sleep 5
+sudo shutdown -h now

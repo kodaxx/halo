@@ -252,6 +252,7 @@ systemctl disable dnsmasq
 chmod +x "$REPO_ROOT/scripts/"*.sh
 chmod +x "$REPO_ROOT/dashboard/web_admin.py"
 chmod +x "$REPO_ROOT/firstboot.sh"
+chmod +x "$REPO_ROOT/dev_tools/*.sh"
 
 echo "=== BUILD COMPLETE ==="
 echo "1. Shutdown using: 'sudo shutdown now'"
