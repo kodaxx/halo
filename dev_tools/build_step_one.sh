@@ -11,20 +11,29 @@ set -e
 
 echo "=== Halo Build: Step 1/2 ==="
 
-# 1. Update & Sync Kernel/Headers (CRITICAL)
-echo "[1/4] syncing system kernel and headers..."
-sudo apt-get update
-# Force full upgrade first to get latest kernel
-sudo apt-get full-upgrade -y
+# 1. Install Matching Headers & Lock (CRITICAL)
+# We must compile against the EXACT kernel version we are running.
+# Since we DO NOT want to upgrade the kernel, we fetch headers matching the CURRENT installed kernel pkg.
 
-# Install headers NOW to ensure they match the kernel we just installed
-sudo apt-get install -y raspberrypi-kernel-headers git device-tree-compiler
+echo "[1/4] Checking kernel version..."
+CURRENT_KERNEL_VER=$(dpkg-query -W -f='${Version}' raspberrypi-kernel)
+echo "Current Kernel Package: $CURRENT_KERNEL_VER"
 
-# 2. Lock Kernel (Now that we are synced)
-echo "[2/4] Locking kernel version..."
-# We lock BOTH to ensure they stay in sync
+echo "[1/4] Installing matching headers..."
+# Try to install the headers that match this specific version
+if sudo apt-get install -y raspberrypi-kernel-headers="$CURRENT_KERNEL_VER"; then
+    echo "Success: Installed matching headers."
+else
+    echo "ERROR: Could not find headers for kernel $CURRENT_KERNEL_VER."
+    echo "The repository may have rotated them out. You might need to allow a kernel upgrade."
+    echo "Retry with the 'Upgrade Kernel' strategy if this fails."
+    exit 1
+fi
+
+# 2. Lock Kernel & Headers
+echo "[2/4] Locking kernel/headers version..."
 sudo apt-mark hold raspberrypi-kernel raspberrypi-bootloader raspberrypi-kernel-headers
-echo "Kernel and Headers synced and pinned."
+echo "Kernel and Headers pinned at $CURRENT_KERNEL_VER"
 
 # 3. Clone Repository
 echo "[3/4] Ensuring Repository..."
