@@ -76,53 +76,48 @@ else
     echo "Install Docker Desktop to enable automatic shrinking."
 fi
 
-# Inject Headless Config (userconf.txt + ssh)
-# The OS deletes these on boot, so we must add them back to the captured image
-# to ensure the *next* user can SSH in.
-USERCONF_SRC="$REPO_ROOT/dev_tools/pi_files/userconf.txt"
-if [ -f "$USERCONF_SRC" ]; then
-    echo "Injecting Headless Config (ssh + userconf.txt)..."
-    
-    # 1. Mount the image
-    # -nomount: Don't auto-mount, just attach
-    # We parse the output to find the boot partition (usually 's1', DOS_FAT_32)
-    ATTACH_OUT=$(hdiutil attach -nomount "$IMAGE_PATH")
-    DEV_NODE=$(echo "$ATTACH_OUT" | head -n 1 | awk '{print $1}')
-    
-    if [ -z "$DEV_NODE" ]; then
-        echo "Error: Failed to attach image for injection."
-    else
-        echo "Attached as $DEV_NODE. Mounting boot partition..."
-        
-        # Helper to create a temp mount point
-        MOUNT_POINT="/tmp/halo_boot_mnt"
-        mkdir -p "$MOUNT_POINT"
-        
-        # Try to mount the first partition (boot)
-        # On Mac, usually /dev/diskXs1
-        # We use 'mount -t msdos' for FAT32 boot partition
-        if mount -t msdos "${DEV_NODE}s1" "$MOUNT_POINT"; then
-             echo "Mounted at $MOUNT_POINT."
-             
-             # 2. Inject Files
-             echo "Creating 'ssh' file..."
-             touch "$MOUNT_POINT/ssh"
-             
-             echo "Copying userconf.txt..."
-             cp "$USERCONF_SRC" "$MOUNT_POINT/userconf.txt"
-             
-             # 3. Cleanup
-             echo "Unmounting..."
-             umount "$MOUNT_POINT"
-        else
-             echo "Error: Failed to mount boot partition."
-        fi
-        
-        echo "Detaching image..."
-        hdiutil detach "$DEV_NODE"
-    fi
+# Inject Headless Config (ssh only)
+# The OS deletes the ssh trigger on boot, so we must add it back to the captured image
+# to ensure the *next* user can SSH in immediately.
+echo "Injecting Headless Config (ssh trigger)..."
+
+# 1. Mount the image
+# -nomount: Don't auto-mount, just attach
+# We parse the output to find the boot partition (usually 's1', DOS_FAT_32)
+ATTACH_OUT=$(hdiutil attach -nomount "$IMAGE_PATH")
+DEV_NODE=$(echo "$ATTACH_OUT" | head -n 1 | awk '{print $1}')
+
+if [ -z "$DEV_NODE" ]; then
+    echo "Error: Failed to attach image for injection."
 else
-    echo "WARNING: $USERCONF_SRC not found. Skipping headless injection."
+    echo "Attached as $DEV_NODE. Mounting boot partition..."
+    
+    # Helper to create a temp mount point
+    MOUNT_POINT="/tmp/halo_boot_mnt"
+    mkdir -p "$MOUNT_POINT"
+    
+    # Try to mount the first partition (boot)
+    # On Mac, usually /dev/diskXs1
+    # We use 'mount -t msdos' for FAT32 boot partition
+    if mount -t msdos "${DEV_NODE}s1" "$MOUNT_POINT"; then
+         echo "Mounted at $MOUNT_POINT."
+         
+         # 2. Inject SSH Trigger
+         echo "Creating 'ssh' file..."
+         touch "$MOUNT_POINT/ssh"
+         
+         # Note: userconf.txt is NOT injected because the 'halo' user
+         # already exists in this captured image.
+         
+         # 3. Cleanup
+         echo "Unmounting..."
+         umount "$MOUNT_POINT"
+    else
+         echo "Error: Failed to mount boot partition."
+    fi
+    
+    echo "Detaching image..."
+    hdiutil detach "$DEV_NODE"
 fi
 
 echo "Compressing image..."
