@@ -35,6 +35,13 @@ fi
 
 # 2. Generate & Display Credentials
 # We do this now so you see them even if the network cuts out later.
+
+# Ensure qrencode is installed
+if ! command -v qrencode &> /dev/null; then
+    log "Installing qrencode..."
+    apt-get install -y qrencode || log "WARNING: Failed to install qrencode. QR code will not be displayed."
+fi
+
 log "Generating Security Credentials..."
 
 # MAC Address Suffix for SSID (Unique to device)
@@ -61,12 +68,12 @@ echo "========================================================"
 echo "SSID: $NEW_SSID"
 echo "PASS: $NEW_PASS"
 echo "ADMIN: http://10.0.0.1 or http://gw.halo.local"
-echo "QR_STRING: WIFI:S:$NEW_SSID;T:WPA;P:$NEW_PASS;H:true;;"
+#echo "QR_STRING: WIFI:S:$NEW_SSID;T:WPA;P:$NEW_PASS;H:true;;"
 echo "========================================================"
-echo "Scan this QR Code to Connect:"
+echo "Scan this QR Code once the system reboots to Connect:"
 qrencode -t ANSIUTF8 "WIFI:S:$NEW_SSID;T:WPA;P:$NEW_PASS;H:true;;"
 echo "========================================================"
-echo "Make sure to SAVE these now!"
+echo "Make sure to SAVE these credentials now!"
 echo "========================================================"
 echo ""
 log "System will REBOOT in about 60 seconds."
