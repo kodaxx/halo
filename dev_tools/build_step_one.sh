@@ -11,29 +11,25 @@ set -e
 
 echo "=== Halo Build: Step 1/2 ==="
 
-# 1. Install Matching Headers & Lock (CRITICAL)
-# We must compile against the EXACT kernel version we are running.
-# Since we DO NOT want to upgrade the kernel, we fetch headers matching the CURRENT installed kernel pkg.
-
-echo "[1/4] Checking kernel version..."
-CURRENT_KERNEL_VER=$(dpkg-query -W -f='${Version}' raspberrypi-kernel)
-echo "Current Kernel Package: $CURRENT_KERNEL_VER"
-
-echo "[1/4] Installing matching headers..."
-# Try to install the headers that match this specific version
-if sudo apt-get install -y raspberrypi-kernel-headers="$CURRENT_KERNEL_VER"; then
-    echo "Success: Installed matching headers."
-else
-    echo "ERROR: Could not find headers for kernel $CURRENT_KERNEL_VER."
-    echo "The repository may have rotated them out. You might need to allow a kernel upgrade."
-    echo "Retry with the 'Upgrade Kernel' strategy if this fails."
-    exit 1
+# 1. Lock Kernel Version (Prevent upgrade to incompatible 6.x)
+echo "[1/4] Locking kernel version..."
+if ! mapfile -t held_packages < <(apt-mark showhold); then
+     held_packages=()
 fi
 
-# 2. Lock Kernel & Headers
-echo "[2/4] Locking kernel/headers version..."
-sudo apt-mark hold raspberrypi-kernel raspberrypi-bootloader raspberrypi-kernel-headers
-echo "Kernel and Headers pinned at $CURRENT_KERNEL_VER"
+if [[ ! " ${held_packages[*]} " =~ " raspberrypi-kernel " ]]; then
+    sudo apt-mark hold raspberrypi-kernel raspberrypi-bootloader raspberrypi-kernel-headers
+    echo "Kernel pinned."
+else
+    echo "Kernel already pinned."
+fi
+
+# 2. System Update
+echo "[2/4] Updating system packages..."
+sudo apt-get update
+# We can safely upgrade now because kernel is held
+sudo apt-get upgrade -y
+sudo apt-get install -y git device-tree-compiler
 
 # 3. Clone Repository
 echo "[3/4] Ensuring Repository..."
