@@ -19,11 +19,20 @@ else
     exit 1
 fi
 
+# Determine Real User (if running as sudo)
+if [ -n "$SUDO_USER" ]; then
+    CURRENT_USER="$SUDO_USER"
+    # reliable way to get home dir of sudo user
+    USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+else
+    CURRENT_USER=$(whoami)
+    USER_HOME="$HOME"
+fi
+
 SRC_EVK="$REPO_ROOT/nrc7292/package/evk/sw_pkg/nrc_pkg"
 BINARY_DIR="$REPO_ROOT/nrc7292/package/evk/binary"
 DRIVER_SRC="$REPO_ROOT/nrc7292/package/src/nrc"
-LOCAL_PKG_DIR="$HOME/nrc_pkg"
-CURRENT_USER=$(whoami)
+LOCAL_PKG_DIR="$USER_HOME/nrc_pkg"
 
 echo "===  Setting up Clean EVK Environment in $LOCAL_PKG_DIR for user $CURRENT_USER ==="
 
@@ -102,12 +111,14 @@ else
 fi
 
 # 4. AGGRESSIVE PATH FIXING (Fix for /home/pi/ persistence)
-echo "Patching ALL paths from /home/pi/ to $HOME/ ..."
+echo "Patching ALL paths from /home/pi/ to $USER_HOME/ ..."
 # Use gre, find, and sed to replace /home/pi in ALL text files in the package
-grep -rl "/home/pi/" "$LOCAL_PKG_DIR" | xargs sed -i "s|/home/pi/|$HOME/|g"
+grep -rl "/home/pi/" "$LOCAL_PKG_DIR" | xargs sed -i "s|/home/pi/|$USER_HOME/|g"
 
-# 5. Fix Permissions
-echo "Fixing permissions..."
+# 5. Fix Permissions & Ownership
+echo "Fixing permissions and ownership..."
+# Ensure the user owns their package (since we might have copied as root)
+chown -R "$CURRENT_USER:$CURRENT_USER" "$LOCAL_PKG_DIR"
 find "$LOCAL_PKG_DIR" -type f \( -name "*.py" -o -name "*.sh" -o -name "copy" -o -name "cli_app" \) -exec chmod +x {} \;
 
 # 6. Patch start.py (Network Safety & wlan1 usage)
