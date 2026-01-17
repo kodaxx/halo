@@ -29,7 +29,7 @@ echo "===  Setting up Clean EVK Environment in $LOCAL_PKG_DIR for user $CURRENT_
 
 # Install Runtime Dependencies
 echo "Installing Runtime Dependencies..."
-sudo apt-get install -y hostapd dnsmasq iptables bridge-utils batctl dkms python3-flask
+sudo apt-get install -y hostapd dnsmasq iptables bridge-utils batctl dkms python3-flask qrencode
 
 # Unmask hostapd (it is often masked by default on RPi)
 sudo systemctl unmask hostapd
