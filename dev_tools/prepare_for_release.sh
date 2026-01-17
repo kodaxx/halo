@@ -1,5 +1,5 @@
 #!/bin/bash
-# Removes sensitive data (WiFi creds, SSH keys, logs) to prepare for Golden Image capture.
+# Removes sensitive data (WiFi creds, SSH keys, logs) to prepare for base image capture.
 # Run this on the Raspberry Pi just before shutting down.
 
 set -e
